@@ -23,9 +23,11 @@
 //! (pet_id, source_type, source_ref) so re-import / re-emission cannot
 //! double-count.
 
+pub mod algorithm;
 pub mod calculator;
 pub mod cost_query;
 pub mod engine;
+pub mod heuristic;
 pub mod pricing;
 pub mod resolver;
 pub mod scorer;
