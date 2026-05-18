@@ -852,6 +852,28 @@ function MoveRow({
   );
 }
 
+/// Hover tooltip text for a model row's tier stripe. Combines the
+/// tier name with the confidence-source note so users hovering the
+/// row understand both "what tier petpet thinks this is" and "where
+/// did that belief come from".
+function tierTooltip(tier: string, confidence: string): string {
+  const tierName =
+    tier === "frontier"
+      ? "Frontier"
+      : tier === "mid"
+      ? "Mid"
+      : tier === "mini"
+      ? "Mini"
+      : "Unknown";
+  const source =
+    confidence === "exact"
+      ? "in registry — exact match"
+      : confidence === "heuristic"
+      ? "inferred from name — not in registry yet"
+      : "no tier signal — defaulting to Mid";
+  return `Tier: ${tierName} (${source})`;
+}
+
 function displayLabel(provider: string): string {
   switch (provider) {
     case "claude":
@@ -1264,15 +1286,10 @@ function ModelsTable({ models }: { models: ModelRow[] }) {
             return (
               <div
                 key={m.model}
-                className={`dash-table-row dash-model-row confidence-${m.confidence}`}
+                className={`dash-table-row dash-model-row tier-${m.tier} confidence-${m.confidence}`}
+                title={tierTooltip(m.tier, m.confidence)}
               >
-                <span className="dash-cell-name" title={m.model}>
-                  <span
-                    className={`tier-badge tier-badge-${m.tier}`}
-                    title={`Tier: ${m.tier}`}
-                  >
-                    {m.tier.toUpperCase()}
-                  </span>
+                <span className="dash-cell-name">
                   <span className="dash-cell-name-text">{m.model}</span>
                   {m.confidence !== "exact" && (
                     <span
