@@ -1035,11 +1035,60 @@
   text-align: right;
 }
 .dash-cell-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Hosts an inline tier badge + the model-name text + optional
+   * "guessed" pill, in that order. Flex layout lets the text ellipsis-
+   * truncate while the badges stay at fixed sizes on the ends. */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   font-family: ui-monospace, "SF Mono", monospace;
   font-size: 9px;
+}
+.dash-cell-name-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.dash-cell-guessed {
+  flex: 0 0 auto;
+  padding: 1px 4px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  background: #f5d36c;
+  color: #4a3a05;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+/* Tier badges — used inline within model-name cells. The colour
+ * reflects the model's tier (Frontier purple, Mid blue, Mini green,
+ * Unknown grey). Kept narrow + uppercase short label so it doesn't
+ * eat horizontal space in the model column. */
+.tier-badge {
+  flex: 0 0 auto;
+  padding: 1px 5px;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  border-radius: 2px;
+  color: #fff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+.tier-badge-frontier { background: #7a3ec1; }
+.tier-badge-mid      { background: #2b6cb0; }
+.tier-badge-mini     { background: #38844a; }
+.tier-badge-unknown  { background: #999; }
+
+/* Subtle yellow tint on rows where the model isn't in the registry —
+ * secondary signal under the inline "guessed" pill so heuristic /
+ * unknown classifications stand out in a scroll of mostly-exact rows. */
+.dash-model-row.confidence-heuristic,
+.dash-model-row.confidence-unknown {
+  background: #fffbe8;
 }
 .dash-cell-total {
   color: #b8860b;
@@ -1364,95 +1413,4 @@
   text-transform: uppercase;
 }
 
-/* ─── Models panel (registry-classified history) ─────────────────────
- * One chip per distinct model the pet has logged. Tier drives the
- * border + badge colour; `confidence-heuristic` / `confidence-unknown`
- * add a yellow "guessed" pill so users can spot models that aren't in
- * data/models.json yet (signal to ping petpet-model-registry).
- */
-.dash-models {
-  margin-top: 8px;
-}
-
-.dash-models-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 6px;
-}
-
-.model-chip {
-  padding: 6px 8px;
-  background: #fdfdfd;
-  border: 1.5px solid #b8b8b8;
-  border-radius: 3px;
-  font-size: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0; /* allow ellipsis truncation inside flex child */
-}
-
-.model-chip.tier-frontier { border-color: #7a3ec1; }
-.model-chip.tier-mid      { border-color: #2b6cb0; }
-.model-chip.tier-mini     { border-color: #38844a; }
-.model-chip.tier-unknown  { border-color: #999; }
-
-/* Yellow-tinted background for guessed rows. Subtle — the chip's tier
- * border still reads first; the tint is the secondary "psst, this
- * tier was inferred" signal. */
-.model-chip.confidence-heuristic,
-.model-chip.confidence-unknown {
-  background: #fffbe8;
-}
-
-.model-chip-head {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.model-chip-name {
-  flex: 1 1 auto;
-  font-weight: 600;
-  font-size: 11px;
-  color: #222;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.tier-badge {
-  flex: 0 0 auto;
-  padding: 1px 5px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border-radius: 2px;
-  color: #fff;
-}
-.tier-badge-frontier { background: #7a3ec1; }
-.tier-badge-mid      { background: #2b6cb0; }
-.tier-badge-mini     { background: #38844a; }
-.tier-badge-unknown  { background: #999; }
-
-.model-chip-guessed {
-  flex: 0 0 auto;
-  padding: 1px 4px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  background: #f5d36c;
-  color: #4a3a05;
-  border-radius: 2px;
-  text-transform: uppercase;
-}
-
-.model-chip-stats {
-  display: flex;
-  gap: 10px;
-  color: #555;
-  font-size: 9px;
-}
 

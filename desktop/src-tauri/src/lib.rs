@@ -1199,7 +1199,6 @@ pub fn run() {
             dashboard::dashboard_data,
             dashboard::dashboard_provider_detail,
             dashboard::dashboard_provider_requests_page,
-            dashboard::recent_models,
             archive_cmds::template_export,
             archive_cmds::pet_export,
             archive_cmds::archive_import,

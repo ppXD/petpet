@@ -42,9 +42,10 @@ use serde::Deserialize;
 use serde_json::Value;
 
 use crate::event::UsageEvent;
-use crate::model::{ModelIdent, Tier};
-use crate::xp::algorithm::{compute_base_xp, Confidence};
-use crate::xp::heuristic::{fallback_tier, validate_model_name, validate_tokens, FallbackResult};
+use crate::model::ModelIdent;
+use crate::xp::algorithm::compute_base_xp;
+use crate::xp::classification::classify;
+use crate::xp::heuristic::{validate_model_name, validate_tokens};
 use crate::xp::resolver::LoadedRule;
 use crate::xp::types::XpComputation;
 
@@ -88,9 +89,12 @@ impl UsageScorer {
             return None;
         }
 
-        // Resolve the model's tier + how confident we are. Registry-
-        // known models come back as Exact; never-seen models flow
-        // through the heuristic with reduced confidence.
+        // Resolve the model's tier + how confident we are. Delegated
+        // to `crate::xp::classification` so the dashboard's "guessed"
+        // badge and the scorer's confidence factor never disagree.
+        // Registry-known models → Exact; hardcoded fallback / keyword
+        // heuristic → Heuristic; nothing → Mid + Unknown (still > 0
+        // XP so the pet keeps growing).
         let (tier, confidence) = classify(ident);
 
         // Base XP from the invariant formula.
@@ -120,23 +124,6 @@ impl UsageScorer {
     }
 }
 
-/// Map `ModelIdent` to `(Tier, Confidence)` for the algorithm.
-///
-/// - Registry-known model → use its tier with `Confidence::Exact`.
-/// - Unknown family but heuristic found a strong keyword →
-///   classify into Mini/Frontier with `Confidence::Heuristic`.
-/// - No signal at all → default to Mid with `Confidence::Unknown`
-///   (still produces XP so the pet keeps growing, just at 0.4×).
-fn classify(ident: &ModelIdent) -> (Tier, Confidence) {
-    if ident.tier != Tier::Unknown {
-        return (ident.tier, Confidence::Exact);
-    }
-    match fallback_tier(&ident.model) {
-        FallbackResult::Confident(t) => (t, Confidence::Heuristic),
-        FallbackResult::Default => (Tier::Mid, Confidence::Unknown),
-    }
-}
-
 // Kept for any internal callers; serde doesn't need it but it
 // documents the original parse path.
 #[allow(dead_code)]
@@ -148,6 +135,7 @@ fn parse_config(v: &Value) -> Option<UsageConfig> {
 mod tests {
     use super::*;
     use crate::event::{EventKind, ProviderId, SourceRef, TokenDelta};
+    use crate::model::Tier;
     use chrono::Utc;
     use serde_json::json;
     use uuid::Uuid;
@@ -232,15 +220,19 @@ mod tests {
 
     #[test]
     fn unknown_opus_variant_falls_back_to_frontier_heuristic() {
-        // claude-opus-9-5: not in registry, hardcoded model.rs fallback
-        // returns Frontier (family-prefix "claude-opus" → Frontier).
-        // → Confidence::Exact (model.rs returned non-Unknown tier).
-        // Tokens: 2000 output → weighted=10000, base=10*1.5=15
+        // claude-opus-9-5: not in registry. model.rs's hardcoded
+        // family table catches `family.starts_with("claude-opus")`
+        // and returns Frontier. Classification (post-Phase-2b-3b-
+        // confidence-fix) treats the hardcoded match as Heuristic
+        // (not Exact), so XP is dampened by 0.7×.
+        //
+        // Tokens: 2000 output → weighted = 10000
+        // base = 10 * 1.5 (frontier) * 0.7 (heuristic) * 1.0 (level 0) = 10.5 → 11
         let r = rule(json!({ "multiplier": 1.0 }));
         let ue = usage_event("claude-opus-9-5", 0, 2000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 15);
+        assert_eq!(c.xp_delta, 11);
     }
 
     #[test]
@@ -260,16 +252,18 @@ mod tests {
     #[test]
     fn heuristic_mini_keyword_attenuates_to_zero_seven() {
         // "future-model-nano": not in registry, model.rs hardcoded
-        // fallback catches "nano" segment → Tier::Mini, exact confidence.
-        // (Heuristic confidence would only kick in if model.rs ALSO
-        // returned Unknown.)
+        // fallback catches the "nano" segment → Tier::Mini. The
+        // confidence-fix makes this Heuristic (not Exact) since the
+        // registry didn't recognise the model name.
+        //
+        // 2000 output → weighted = 10000
+        // base = 10 * 0.5 (mini) * 0.7 (heuristic) * 1.0 (level 0) = 3.5 → 4
         let r = rule(json!({ "multiplier": 1.0 }));
         let ue = usage_event("future-model-nano", 0, 2000, 0);
         let ident = ModelIdent::parse(&ue.model);
         assert_eq!(ident.tier, Tier::Mini);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        // 10 * 0.5 (mini) * 1.0 (exact) = 5
-        assert_eq!(c.xp_delta, 5);
+        assert_eq!(c.xp_delta, 4);
     }
 
     // ─── Rule multiplier clamping ───────────────────────────────────

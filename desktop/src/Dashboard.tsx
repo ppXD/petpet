@@ -106,6 +106,15 @@ interface ModelRow {
   tokens_reasoning: number;
   tokens_total: number;
   cost_usd: number;
+  /// Tier classification — drives the coloured badge in the row.
+  tier: "frontier" | "mid" | "mini" | "unknown";
+  /// `exact` (registry knows it) vs `heuristic` / `unknown` (we're
+  /// guessing). Non-exact rows show a yellow "GUESSED" pill.
+  confidence: "exact" | "heuristic" | "unknown";
+  /// True when the model is in the bundled/synced registry. Currently
+  /// unused by the UI but reserved for a future "from registry source X"
+  /// tooltip.
+  in_registry: boolean;
 }
 interface RequestRow {
   timestamp: string;
@@ -128,24 +137,6 @@ interface DayBreakdownRow {
 }
 interface DayModelRow {
   model: string;
-  events: number;
-  tokens_total: number;
-  cost_usd: number;
-}
-/// One row of the "Models" panel — mirrors `dashboard.rs::RecentModelRow`.
-/// The `confidence` field drives the yellow "guessed" badge; `in_registry`
-/// is currently unused by the UI but kept around for a future "this is
-/// from data/models.json" tooltip.
-interface RecentModelRow {
-  provider: string;
-  model: string;
-  model_normalized: string;
-  vendor: string;
-  family: string;
-  tier: "frontier" | "mid" | "mini" | "unknown";
-  confidence: "exact" | "heuristic" | "unknown";
-  in_registry: boolean;
-  registry_source: string | null;
   events: number;
   tokens_total: number;
   cost_usd: number;
@@ -192,7 +183,6 @@ export function Dashboard({ onClose }: Props) {
   // pet" (default on first load; resolved after summaries arrive).
   const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
   const [data, setData] = useState<DashboardData | null>(null);
-  const [models, setModels] = useState<RecentModelRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   // Two-level navigation stack: overview ↔ provider drill-down. Back
   // button context-sensitive — drill-down's Back returns to overview,
@@ -231,7 +221,6 @@ export function Dashboard({ onClose }: Props) {
     if (!selectedPetId) return;
     let cancelled = false;
     setData(null);
-    setModels(null);
     setView({ kind: "overview" });
     invoke<DashboardData | null>("dashboard_data", { petId: selectedPetId })
       .then((d) => {
@@ -244,17 +233,6 @@ export function Dashboard({ onClose }: Props) {
       })
       .catch((e) => {
         if (!cancelled) setError(String(e));
-      });
-    // Recent models in parallel — the panel renders independently so a
-    // slow models query doesn't block the trainer card. limit=20 covers
-    // a verbose pet's full unique-model set without overflow.
-    invoke<RecentModelRow[]>("recent_models", { petId: selectedPetId, limit: 20 })
-      .then((rows) => {
-        if (!cancelled) setModels(rows);
-      })
-      .catch(() => {
-        // Non-fatal — the dashboard works without this panel.
-        if (!cancelled) setModels([]);
       });
     return () => {
       cancelled = true;
@@ -344,7 +322,6 @@ export function Dashboard({ onClose }: Props) {
                 onChipClick={(slug) => setView({ kind: "provider", slug })}
               />
               <MovesSection recent={data.recent} />
-              {models && models.length > 0 && <ModelsSection models={models} />}
             </>
           )}
 
@@ -875,64 +852,6 @@ function MoveRow({
   );
 }
 
-// ─── Models (registry-classified history) ──────────────────────────
-
-/// "Models" panel — every distinct model the pet has logged, annotated
-/// with the same tier + confidence the XP scorer would apply to its
-/// next event. Color-coded tier badges give a quick read on the pet's
-/// usage profile; a yellow "guessed" overlay on heuristic / unknown
-/// rows signals "this model isn't in our registry yet — ping the
-/// petpet-model-registry repo if you want precise scoring".
-function ModelsSection({ models }: { models: RecentModelRow[] }) {
-  return (
-    <div className="dash-section dash-models">
-      <div className="dash-section-head">MODELS</div>
-      <div className="dash-models-grid">
-        {models.map((m) => (
-          <ModelChip key={`${m.provider}::${m.model_normalized}`} m={m} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ModelChip({ m }: { m: RecentModelRow }) {
-  // Confidence drives the "guessed" overlay: `exact` is silent (the
-  // registry knows this model), `heuristic` / `unknown` add a yellow
-  // badge so the user can spot models that might benefit from a
-  // registry update.
-  const guessed = m.confidence !== "exact";
-  return (
-    <div className={`model-chip tier-${m.tier} confidence-${m.confidence}`}>
-      <div className="model-chip-head">
-        <span className={`tier-badge tier-badge-${m.tier}`}>
-          {m.tier.toUpperCase()}
-        </span>
-        <span className="model-chip-name" title={`${m.vendor} · ${m.family}`}>
-          {m.model}
-        </span>
-        {guessed && (
-          <span
-            className="model-chip-guessed"
-            title={
-              m.confidence === "heuristic"
-                ? "Tier inferred from model name — not in the registry yet."
-                : "No tier signal; treated as Mid at reduced confidence."
-            }
-          >
-            guessed
-          </span>
-        )}
-      </div>
-      <div className="model-chip-stats">
-        <span>{m.events.toLocaleString()} events</span>
-        <span>{fmtTokens(m.tokens_total)} tok</span>
-        {m.cost_usd > 0 && <span>${m.cost_usd.toFixed(2)}</span>}
-      </div>
-    </div>
-  );
-}
-
 function displayLabel(provider: string): string {
   switch (provider) {
     case "claude":
@@ -1343,9 +1262,30 @@ function ModelsTable({ models }: { models: ModelRow[] }) {
             const cachedPct =
               inputTotal > 0 ? (m.tokens_cache_read / inputTotal) * 100 : 0;
             return (
-              <div key={m.model} className="dash-table-row dash-model-row">
+              <div
+                key={m.model}
+                className={`dash-table-row dash-model-row confidence-${m.confidence}`}
+              >
                 <span className="dash-cell-name" title={m.model}>
-                  {m.model}
+                  <span
+                    className={`tier-badge tier-badge-${m.tier}`}
+                    title={`Tier: ${m.tier}`}
+                  >
+                    {m.tier.toUpperCase()}
+                  </span>
+                  <span className="dash-cell-name-text">{m.model}</span>
+                  {m.confidence !== "exact" && (
+                    <span
+                      className="dash-cell-guessed"
+                      title={
+                        m.confidence === "heuristic"
+                          ? "Tier inferred from model name — not in the registry yet. XP scored at 0.7×."
+                          : "No tier signal; treated as Mid at reduced confidence. XP scored at 0.4×."
+                      }
+                    >
+                      guessed
+                    </span>
+                  )}
                 </span>
                 <span className="ralign" title={m.events.toLocaleString()}>
                   {fmtCompactInt(m.events)}

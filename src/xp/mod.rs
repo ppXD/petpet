@@ -25,6 +25,7 @@
 
 pub mod algorithm;
 pub mod calculator;
+pub mod classification;
 pub mod cost_query;
 pub mod engine;
 pub mod heuristic;
