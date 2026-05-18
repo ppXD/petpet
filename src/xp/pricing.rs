@@ -140,16 +140,22 @@ mod tests {
         assert_eq!(p.cache_creation_per_1m, 6.25);
     }
 
-    /// Specificity order: `opus-4-7` matches BEFORE generic `opus`.
-    /// If this regresses, opus-4-7 will get billed at Opus list
-    /// price ($15/$75) and the aggregate will jump 6×.
+    /// Anthropic's 2025-11 Opus pricing drop: Opus 4 / 4.1 stay at the
+    /// old $15/$75 list, Opus 4.5 / 4.6 / 4.7 drop to $5/$25. Both
+    /// price points must remain reachable; legacy users with Opus 4
+    /// logs need the old rate or daily aggregates jump 3× against
+    /// CodexBar / Anthropic's authoritative numbers.
     #[test]
-    fn opus_4_7_beats_generic_opus() {
-        let specific = lookup(ProviderId::ClaudeCode, "claude-opus-4-7").unwrap();
-        let generic = lookup(ProviderId::ClaudeCode, "claude-opus-4-5-20251101").unwrap();
-        assert_ne!(specific, generic, "tier specificity broke");
-        assert_eq!(specific.cache_read_per_1m, 0.50);
-        assert_eq!(generic.cache_read_per_1m, 1.50, "generic Opus is list-price");
+    fn opus_4_pricing_split_by_version() {
+        let old = lookup(ProviderId::ClaudeCode, "claude-opus-4-20250514").unwrap();
+        let new = lookup(ProviderId::ClaudeCode, "claude-opus-4-5-20251101").unwrap();
+        let newer = lookup(ProviderId::ClaudeCode, "claude-opus-4-7").unwrap();
+
+        assert_eq!(old.input_per_1m, 15.00, "Opus 4 stays at old $15 list");
+        assert_eq!(new.input_per_1m, 5.00, "Opus 4.5 dropped to new $5 list");
+        assert_eq!(newer.input_per_1m, 5.00, "Opus 4.7 same new tier");
+        assert_eq!(new, newer, "All Opus 4.5+ share one pricing tier");
+        assert_ne!(old, new, "Old vs new Opus tiers must differ");
     }
 
     /// Sonnet family matches dated variants.

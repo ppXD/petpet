@@ -486,15 +486,27 @@ mod tests {
     }
 
     #[test]
-    fn opus_4_7_specific_beats_generic_opus() {
-        // Critical invariant from the CodexBar reconciliation: opus-4-7
-        // must NOT fall through to the generic Opus tier ($15/$75).
+    fn opus_4_5_plus_drops_to_new_tier_pricing() {
+        // Anthropic dropped Opus pricing at the 4.5 release: 4 / 4.1
+        // stay at the old $15/$75 list, 4.5 / 4.6 / 4.7 drop to $5/$25.
+        // Pin this so a future "let's unify all Opus pricing" PR can't
+        // silently re-inflate the new-tier rates.
         let r = Registry::bundled();
-        let specific = r.lookup("claude-opus-4-7").unwrap();
-        let generic = r.lookup("claude-opus-4-5").unwrap();
-        assert_ne!(specific.pricing, generic.pricing);
-        assert_eq!(specific.pricing.cache_read, 0.50);
-        assert_eq!(generic.pricing.cache_read, 1.50);
+        let old_opus = r.lookup("claude-opus-4").unwrap();
+        let new_opus_45 = r.lookup("claude-opus-4-5").unwrap();
+        let new_opus_47 = r.lookup("claude-opus-4-7").unwrap();
+
+        assert_eq!(old_opus.pricing.input, 15.00, "Opus 4 stays at $15/1M list");
+        assert_eq!(new_opus_45.pricing.input, 5.00, "Opus 4.5 dropped to $5/1M");
+        assert_eq!(new_opus_47.pricing.input, 5.00, "Opus 4.7 same new tier");
+        assert_eq!(
+            new_opus_45.pricing, new_opus_47.pricing,
+            "All Opus 4.5+ share one pricing tier"
+        );
+        assert_ne!(
+            old_opus.pricing, new_opus_45.pricing,
+            "Old vs new Opus tiers must differ — invariant from Anthropic 2025-11 price drop"
+        );
     }
 
     #[test]
