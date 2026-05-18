@@ -39,7 +39,7 @@ use crate::event::ProviderId;
 pub struct CodexHookInstaller;
 
 fn codex_dir() -> Option<PathBuf> {
-    let home = dirs::home_dir()?;
+    let home = crate::paths::home_dir()?;
     let dir = home.join(".codex");
     if !dir.exists() {
         return None;

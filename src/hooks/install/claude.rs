@@ -43,7 +43,7 @@ use crate::event::ProviderId;
 pub struct ClaudeHookInstaller;
 
 fn settings_path() -> Option<PathBuf> {
-    let home = dirs::home_dir()?;
+    let home = crate::paths::home_dir()?;
     let claude_dir = home.join(".claude");
     if !claude_dir.exists() {
         return None;

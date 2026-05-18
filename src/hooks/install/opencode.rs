@@ -224,50 +224,32 @@ mod tests {
         let dir = tempdir().unwrap();
         let plugins = dir.path().join(".config/opencode/plugins");
         fs::create_dir_all(&plugins).unwrap();
-        // Comprehensive env-var sandboxing across every platform the
-        // path lookups read from:
-        //   - HOME / USERPROFILE  → `dirs::home_dir()` on Unix /
-        //     Windows respectively
-        //   - XDG_CONFIG_HOME      → higher-priority Unix override
-        //   - OPENCODE_CONFIG_DIR  → app-specific override (any OS)
-        //   - APPDATA / LOCALAPPDATA → Windows-specific candidates
-        //     added by `opencode_config_dir_candidates`; without
-        //     clearing these the install writes inside the runner's
-        //     real `%APPDATA%\opencode\plugins` and the assertions
-        //     against the tempdir's plugins/ all fail (the cause of
-        //     the original windows-latest CI breakage).
+        // Sandbox HOME (and the higher-priority opencode-specific +
+        // XDG overrides) into the tempdir. We deliberately do NOT
+        // mutate `APPDATA` / `LOCALAPPDATA`: those are read by
+        // `paths::tests::windows_candidates_include_appdata_and_localappdata`
+        // running in parallel under its own lock, and clearing them
+        // here would race that test on windows-latest. The Unix-style
+        // `~/.config/opencode/plugins` candidate (under our sandboxed
+        // HOME) exists before install runs, and `first_existing` picks
+        // it as the highest-priority match, so the Windows APPDATA
+        // probes don't matter for correctness here.
         let prev_home = env::var("HOME").ok();
-        let prev_userprofile = env::var("USERPROFILE").ok();
         let prev_xdg = env::var("XDG_CONFIG_HOME").ok();
         let prev_oc = env::var("OPENCODE_CONFIG_DIR").ok();
-        let prev_appdata = env::var("APPDATA").ok();
-        let prev_localappdata = env::var("LOCALAPPDATA").ok();
         env::set_var("HOME", dir.path());
-        env::set_var("USERPROFILE", dir.path());
         env::remove_var("XDG_CONFIG_HOME");
         env::remove_var("OPENCODE_CONFIG_DIR");
-        env::remove_var("APPDATA");
-        env::remove_var("LOCALAPPDATA");
         f(dir.path());
         match prev_home {
             Some(h) => env::set_var("HOME", h),
             None => env::remove_var("HOME"),
-        }
-        match prev_userprofile {
-            Some(v) => env::set_var("USERPROFILE", v),
-            None => env::remove_var("USERPROFILE"),
         }
         if let Some(v) = prev_xdg {
             env::set_var("XDG_CONFIG_HOME", v);
         }
         if let Some(v) = prev_oc {
             env::set_var("OPENCODE_CONFIG_DIR", v);
-        }
-        if let Some(v) = prev_appdata {
-            env::set_var("APPDATA", v);
-        }
-        if let Some(v) = prev_localappdata {
-            env::set_var("LOCALAPPDATA", v);
         }
     }
 

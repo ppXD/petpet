@@ -42,15 +42,41 @@ where
     v.into_iter().next()
 }
 
+/// Resolve the user's home directory, preferring an explicit `HOME`
+/// env var if set. Falls back to `dirs::home_dir()` for the
+/// platform-native lookup.
+///
+/// **Why this helper exists**: `dirs::home_dir()` on Windows reads
+/// `SHGetKnownFolderPath(FOLDERID_Profile)` from the Windows API and
+/// ignores `HOME`, which makes it impossible for tests to sandbox
+/// the home directory through an env var. Several real-world tools
+/// (msys2, WSL, git-for-windows, JetBrains IDEs, etc.) also expect
+/// `HOME` to be honoured on Windows when explicitly set. Preferring
+/// `HOME` first lets us write OS-agnostic install paths AND lets
+/// the test suite swap `HOME` to a tempdir on every platform with
+/// no special-casing.
+///
+/// On Unix, behaviour is unchanged (HOME is what `dirs::home_dir()`
+/// reads anyway). On Windows, behaviour is unchanged for users who
+/// don't set `HOME` (falls back to the Win32 lookup).
+pub(crate) fn home_dir() -> Option<PathBuf> {
+    if let Ok(p) = std::env::var("HOME") {
+        if !p.is_empty() {
+            return Some(PathBuf::from(p));
+        }
+    }
+    dirs::home_dir()
+}
+
 // ─── petpet's own state ────────────────────────────────────────────
 
 /// Where we keep our own state (db, settings).
-/// `~/.petpet/` on every platform via `dirs::home_dir`.
+/// `~/.petpet/` on every platform via `home_dir`.
 pub fn app_dir() -> PathBuf {
     if let Ok(p) = std::env::var("PETPET_HOME") {
         return PathBuf::from(p);
     }
-    let home = dirs::home_dir().expect("could not resolve home directory");
+    let home = home_dir().expect("could not resolve home directory");
     home.join(".petpet")
 }
 
@@ -120,7 +146,7 @@ pub fn claude_projects_root() -> Option<PathBuf> {
     if let Ok(p) = std::env::var("PETPET_CLAUDE_PROJECTS_ROOT") {
         return Some(PathBuf::from(p));
     }
-    Some(dirs::home_dir()?.join(".claude").join("projects"))
+    Some(home_dir()?.join(".claude").join("projects"))
 }
 
 // ─── Codex CLI ─────────────────────────────────────────────────────
@@ -139,7 +165,7 @@ pub fn codex_sessions_root_candidates() -> Vec<PathBuf> {
     if let Ok(p) = std::env::var("PETPET_CODEX_SESSIONS_ROOT") {
         v.push(PathBuf::from(p));
     }
-    if let Some(home) = dirs::home_dir() {
+    if let Some(home) = home_dir() {
         v.push(home.join(".codex").join("sessions"));
     }
     #[cfg(target_os = "windows")]
@@ -164,7 +190,7 @@ pub fn codex_sessions_root() -> Option<PathBuf> {
 /// Where to install the Codex `config.toml` / `hooks.json` (always
 /// `~/.codex/` per docs).
 pub fn codex_config_dir() -> Option<PathBuf> {
-    Some(dirs::home_dir()?.join(".codex"))
+    Some(home_dir()?.join(".codex"))
 }
 
 // ─── OpenCode ──────────────────────────────────────────────────────
@@ -187,7 +213,7 @@ pub fn opencode_config_dir_candidates() -> Vec<PathBuf> {
     if let Ok(p) = std::env::var("XDG_CONFIG_HOME") {
         v.push(PathBuf::from(p).join("opencode"));
     }
-    if let Some(home) = dirs::home_dir() {
+    if let Some(home) = home_dir() {
         v.push(home.join(".config").join("opencode"));
     }
     #[cfg(target_os = "windows")]
@@ -226,7 +252,7 @@ pub fn opencode_data_dir_candidates() -> Vec<PathBuf> {
     if let Ok(p) = std::env::var("XDG_DATA_HOME") {
         v.push(PathBuf::from(p).join("opencode"));
     }
-    if let Some(home) = dirs::home_dir() {
+    if let Some(home) = home_dir() {
         v.push(home.join(".local").join("share").join("opencode"));
     }
     #[cfg(target_os = "windows")]

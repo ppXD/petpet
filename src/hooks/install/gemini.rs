@@ -22,7 +22,7 @@ use crate::event::ProviderId;
 pub struct GeminiHookInstaller;
 
 fn settings_path() -> Option<PathBuf> {
-    let home = dirs::home_dir()?;
+    let home = crate::paths::home_dir()?;
     let dir = home.join(".gemini");
     if !dir.exists() {
         return None;
