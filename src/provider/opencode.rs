@@ -38,7 +38,7 @@ use serde::Deserialize;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-use crate::db::{Cursor, DbHandle};
+use crate::db::{Cursor, CursorKind, DbHandle};
 use crate::event::{EventKind, ProviderId, SourceRef, TokenDelta, UsageEvent};
 use crate::hooks::ActivitySink;
 use crate::paths;
@@ -75,7 +75,7 @@ impl OpenCodeProvider {
             return Ok(BackfillStats::default());
         }
         let key = self.cursor_key();
-        let prior = self.db.get_cursor(ProviderId::OpenCode, &key).await?;
+        let prior = self.db.get_cursor(ProviderId::OpenCode, &key, CursorKind::Live).await?;
         let prior_ms: i64 = match prior {
             Some(c) => c.byte_offset as i64,
             None => {
@@ -84,6 +84,7 @@ impl OpenCodeProvider {
                     .set_cursor(
                         ProviderId::OpenCode,
                         &key,
+                        CursorKind::Live,
                         Cursor { byte_offset: max_ms as u64, line_index: 0 },
                     )
                     .await?;
@@ -112,6 +113,7 @@ impl OpenCodeProvider {
                 .set_cursor(
                     ProviderId::OpenCode,
                     &key,
+                    CursorKind::Live,
                     Cursor { byte_offset: latest_ms as u64, line_index: 0 },
                 )
                 .await?;
@@ -138,7 +140,7 @@ impl OpenCodeProvider {
             return Ok(());
         }
         let key = self.cursor_key();
-        let prior = self.db.get_cursor(ProviderId::OpenCode, &key).await?;
+        let prior = self.db.get_cursor(ProviderId::OpenCode, &key, CursorKind::Live).await?;
         let Some(prior) = prior else { return Ok(()) };
 
         let age = self.db.heartbeat_age_secs().await.unwrap_or(None);
@@ -161,6 +163,7 @@ impl OpenCodeProvider {
                 .set_cursor(
                     ProviderId::OpenCode,
                     &key,
+                    CursorKind::Live,
                     Cursor { byte_offset: max_ms as u64, line_index: 0 },
                 )
                 .await?;
@@ -232,6 +235,18 @@ impl Provider for OpenCodeProvider {
     }
 
     async fn backfill(&self, sink: &EventSink) -> Result<BackfillStats> {
+        self.drain(sink).await
+    }
+
+    async fn import_historical(&self, sink: &EventSink) -> Result<BackfillStats> {
+        // OpenCode's `drain` reads a single JSON state file (not a
+        // line-oriented JSONL log), so there's no historical-vs-live
+        // distinction to make per-line. The state file always reflects
+        // the union of all sessions OpenCode has ever recorded, so
+        // calling `drain` covers the same ground as `import_historical`
+        // semantically. XP isolation comes from the SINK the caller
+        // passes — `lib.rs::spawn_ingestion` routes history through a
+        // DB-only sink, so this stays display-only by construction.
         self.drain(sink).await
     }
 

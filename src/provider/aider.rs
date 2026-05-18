@@ -139,6 +139,13 @@ impl Provider for AiderProvider {
         }
     }
 
+    async fn import_historical(&self, sink: &EventSink) -> Result<BackfillStats> {
+        match &self.watcher {
+            Some(w) => w.import_historical(sink).await,
+            None => Ok(BackfillStats::default()),
+        }
+    }
+
     async fn watch(
         &self,
         sink: &EventSink,

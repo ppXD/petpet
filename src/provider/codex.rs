@@ -57,6 +57,10 @@ impl Provider for CodexProvider {
         self.watcher.backfill(sink).await
     }
 
+    async fn import_historical(&self, sink: &EventSink) -> Result<BackfillStats> {
+        self.watcher.import_historical(sink).await
+    }
+
     async fn watch(
         &self,
         sink: &EventSink,
