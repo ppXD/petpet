@@ -457,6 +457,39 @@
   line-height: 1.8;
 }
 
+/* ─── Historical import banner ──────────────────────────────────────
+ * Shown at the top of the dashboard while spawn_ingestion's
+ * historical-import task runs. Two states:
+ *   .is-active  ⏳ in-progress, soft yellow tint
+ *   .is-done    ✓ completed, soft green tint, auto-dismisses 4s
+ * Non-blocking — purely informational. */
+.dash-import-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 10px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 200ms ease, border-color 200ms ease;
+}
+.dash-import-banner.is-active {
+  background: #fffbe8;
+  border-color: #e8c14a;
+  color: #5a4a05;
+}
+.dash-import-banner.is-done {
+  background: #e8f5ea;
+  border-color: #5aa86c;
+  color: #1a4a25;
+}
+.dash-import-banner-icon {
+  flex: 0 0 auto;
+  font-size: 12px;
+}
+
 /* ─── Identity row ────────────────────────────────────────────── */
 
 .dash-identity {
