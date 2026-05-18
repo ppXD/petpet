@@ -106,13 +106,29 @@ fn exec_through_shell(cmd: &str, stdin_body: &[u8]) -> std::io::Result<std::proc
         .spawn()?;
 
     #[cfg(windows)]
-    let mut child = Command::new("cmd")
-        .arg("/c")
-        .arg(cmd)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+    let mut child = {
+        use std::os::windows::process::CommandExt;
+        // `cmd /c "..."` (without `/s`) applies a quirky heuristic to the
+        // post-`/c` text — and Rust's default `Command::arg` quoting
+        // (CommandLineToArgvW rules) doesn't compose with it. The
+        // combination shreds curl's args: the `"Content-Type: ..."` value
+        // leaks out, `application/json"` becomes a positional URL, and
+        // curl tries to DNS-resolve `application` (error 28) before
+        // choking on the second URL's port (error 3).
+        //
+        // `/d /s /c "..."` tells cmd to strip exactly the outermost quote
+        // pair and pass the rest verbatim to curl, which then parses the
+        // embedded `"..."`-quoted args correctly. `raw_arg` keeps Rust
+        // from re-escaping our quotes. This matches what Node.js's
+        // `child_process.exec` does on Windows, so it also mirrors how
+        // real Claude Code / Codex execute installed hook commands.
+        Command::new("cmd")
+            .raw_arg(format!("/d /s /c \"{cmd}\""))
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?
+    };
 
     use std::io::Write;
     child
