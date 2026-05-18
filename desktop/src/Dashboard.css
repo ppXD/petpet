@@ -1035,9 +1035,9 @@
   text-align: right;
 }
 .dash-cell-name {
-  /* Hosts an inline tier badge + the model-name text + optional
-   * "guessed" pill, in that order. Flex layout lets the text ellipsis-
-   * truncate while the badges stay at fixed sizes on the ends. */
+  /* Hosts the model-name text + optional "guessed" pill. Flex so the
+   * text ellipsis-truncates while the pill stays fixed-width on the
+   * right. */
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -1064,24 +1064,31 @@
   text-transform: uppercase;
 }
 
-/* Tier badges — used inline within model-name cells. The colour
- * reflects the model's tier (Frontier purple, Mid blue, Mini green,
- * Unknown grey). Kept narrow + uppercase short label so it doesn't
- * eat horizontal space in the model column. */
-.tier-badge {
-  flex: 0 0 auto;
-  padding: 1px 5px;
-  font-size: 8px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  border-radius: 2px;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+/* Tier stripe — 4px coloured marker painted on the left edge of each
+ * model row via `box-shadow: inset`. Doesn't take layout space (the
+ * row's existing 10px left padding leaves a clean ~6px gap before
+ * the model name), so it's invisible to the column grid while still
+ * giving an at-a-glance tier signal as the user scrolls.
+ *
+ * `:not(.dash-table-head)` scopes only to data rows — the header
+ * shares `.dash-model-row` for column-template alignment but
+ * shouldn't have a stripe.
+ *
+ * Tooltip in `tierTooltip()` (Dashboard.tsx) provides the text name
+ * + provenance for accessibility; the GUESSED pill is the textual
+ * backup signal for non-Exact rows. */
+.dash-model-row.tier-frontier:not(.dash-table-head) {
+  box-shadow: inset 4px 0 0 0 #7a3ec1;
 }
-.tier-badge-frontier { background: #7a3ec1; }
-.tier-badge-mid      { background: #2b6cb0; }
-.tier-badge-mini     { background: #38844a; }
-.tier-badge-unknown  { background: #999; }
+.dash-model-row.tier-mid:not(.dash-table-head) {
+  box-shadow: inset 4px 0 0 0 #2b6cb0;
+}
+.dash-model-row.tier-mini:not(.dash-table-head) {
+  box-shadow: inset 4px 0 0 0 #38844a;
+}
+.dash-model-row.tier-unknown:not(.dash-table-head) {
+  box-shadow: inset 4px 0 0 0 #999;
+}
 
 /* Subtle yellow tint on rows where the model isn't in the registry —
  * secondary signal under the inline "guessed" pill so heuristic /
