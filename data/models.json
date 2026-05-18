@@ -1,0 +1,1357 @@
+{
+  "$schema": "./models.schema.json",
+  "schema_version": 1,
+  "updated_at": "2026-05-18T00:00:00Z",
+  "registry_url": "https://github.com/ppXD/petpet-model-registry",
+  "comment": "Bundled fallback registry. Lookup precedence: exact_alias > substring_keys (in declared order, most-specific first per vendor block) > heuristic tier > fallback_tier_pricing. Pricing in USD per 1M tokens. Every entry MUST have a `source` block — prices without provenance are not accepted.",
+
+  "fallback_tier_pricing": {
+    "comment": "Used when a model name resolves to a tier via heuristic but has no exact entry. Numbers are conservative tier medians — favour under-pricing over over-pricing because over-counting USD is worse than under-counting.",
+    "frontier": {
+      "input": 5.00,
+      "output": 25.00,
+      "cache_read": 0.50,
+      "cache_creation": 6.25,
+      "reasoning": 5.00
+    },
+    "mid": {
+      "input": 1.00,
+      "output": 5.00,
+      "cache_read": 0.10,
+      "cache_creation": 1.25,
+      "reasoning": 1.00
+    },
+    "mini": {
+      "input": 0.20,
+      "output": 1.00,
+      "cache_read": 0.02,
+      "cache_creation": 0.25,
+      "reasoning": 0.20
+    },
+    "local": {
+      "input": 0.00,
+      "output": 0.00,
+      "cache_read": 0.00,
+      "cache_creation": 0.00,
+      "reasoning": 0.00
+    }
+  },
+
+  "special_markers": [
+    {
+      "id": "_free_tier_suffix",
+      "comment": "Catch-all for any model name ending in `-free` (OpenRouter free tier, Qwen free, mirror endpoints). MUST be matched BEFORE any vendor entry.",
+      "match": {
+        "suffix": "-free"
+      },
+      "tier": "mini",
+      "pricing_per_1m_usd": {
+        "input": 0.00,
+        "output": 0.00,
+        "cache_read": 0.00,
+        "cache_creation": 0.00,
+        "reasoning": 0.00
+      },
+      "source": {
+        "type": "convention",
+        "note": "OpenRouter / mirror convention — `-free` always means $0"
+      }
+    }
+  ],
+
+  "models": [
+    {
+      "_section": "── Anthropic Claude ─────────────────────────────────"
+    },
+    {
+      "id": "claude-opus-4-7",
+      "vendor": "anthropic",
+      "family": "claude-opus",
+      "tier": "frontier",
+      "context_window": 200000,
+      "max_output_tokens": 32000,
+      "match": {
+        "substring_keys": ["opus-4-7"],
+        "exact_aliases": ["claude-opus-4-7"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 5.00,
+        "output": 25.00,
+        "cache_read": 0.50,
+        "cache_creation": 6.25,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "extended_thinking", "prompt_caching"],
+      "released": "2026-04",
+      "source": {
+        "type": "back-derived",
+        "url": null,
+        "note": "Back-derived from CodexBar 5/16 reconciliation: petpet aggregate input=9394 / output=981958 / cache_read=392559814 / cache_create=3385391 vs CodexBar tooltip $241.89. Linear-system solve under Anthropic standard ratios (5×/0.1×/1.25× off input) → $5/$25/$0.50/$6.25 (computed $242.04, 0.06% match). Not on Anthropic's public pricing page."
+      }
+    },
+    {
+      "id": "claude-opus-4-5",
+      "vendor": "anthropic",
+      "family": "claude-opus",
+      "tier": "frontier",
+      "context_window": 200000,
+      "max_output_tokens": 32000,
+      "match": {
+        "substring_keys": ["opus-4-5"],
+        "exact_aliases": ["claude-opus-4-5"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 15.00,
+        "output": 75.00,
+        "cache_read": 1.50,
+        "cache_creation": 18.75,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "extended_thinking", "prompt_caching"],
+      "released": "2025-11",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Anthropic Claude Opus 4.5 list pricing"
+      }
+    },
+    {
+      "id": "claude-opus-4",
+      "vendor": "anthropic",
+      "family": "claude-opus",
+      "tier": "frontier",
+      "context_window": 200000,
+      "max_output_tokens": 32000,
+      "match": {
+        "substring_keys": ["opus-4"],
+        "exact_aliases": ["claude-opus-4"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 15.00,
+        "output": 75.00,
+        "cache_read": 1.50,
+        "cache_creation": 18.75,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "extended_thinking", "prompt_caching"],
+      "released": "2025-05",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Anthropic Claude Opus 4 list pricing"
+      }
+    },
+    {
+      "id": "claude-opus-3",
+      "vendor": "anthropic",
+      "family": "claude-opus",
+      "tier": "frontier",
+      "context_window": 200000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["claude-3-opus"],
+        "exact_aliases": ["claude-3-opus-20240229", "claude-3-opus-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 15.00,
+        "output": 75.00,
+        "cache_read": 1.50,
+        "cache_creation": 18.75,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "prompt_caching"],
+      "released": "2024-02",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Claude 3 Opus (legacy). Same rates as Opus 4."
+      }
+    },
+    {
+      "id": "claude-sonnet-4-5",
+      "vendor": "anthropic",
+      "family": "claude-sonnet",
+      "tier": "mid",
+      "context_window": 200000,
+      "max_output_tokens": 64000,
+      "match": {
+        "substring_keys": ["sonnet-4-5"],
+        "exact_aliases": ["claude-sonnet-4-5"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 3.00,
+        "output": 15.00,
+        "cache_read": 0.30,
+        "cache_creation": 3.75,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "extended_thinking", "prompt_caching"],
+      "released": "2025-09",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Anthropic Claude Sonnet 4.5 list pricing"
+      }
+    },
+    {
+      "id": "claude-sonnet-4",
+      "vendor": "anthropic",
+      "family": "claude-sonnet",
+      "tier": "mid",
+      "context_window": 200000,
+      "max_output_tokens": 64000,
+      "match": {
+        "substring_keys": ["sonnet-4"],
+        "exact_aliases": ["claude-sonnet-4"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 3.00,
+        "output": 15.00,
+        "cache_read": 0.30,
+        "cache_creation": 3.75,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "extended_thinking", "prompt_caching"],
+      "released": "2025-05",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Anthropic Claude Sonnet 4 list pricing"
+      }
+    },
+    {
+      "id": "claude-3-5-sonnet",
+      "vendor": "anthropic",
+      "family": "claude-sonnet",
+      "tier": "mid",
+      "context_window": 200000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["claude-3-5-sonnet"],
+        "exact_aliases": [
+          "claude-3-5-sonnet-20241022",
+          "claude-3-5-sonnet-20240620",
+          "claude-3-5-sonnet-latest"
+        ]
+      },
+      "pricing_per_1m_usd": {
+        "input": 3.00,
+        "output": 15.00,
+        "cache_read": 0.30,
+        "cache_creation": 3.75,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "prompt_caching"],
+      "released": "2024-06",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Claude 3.5 Sonnet (legacy). Same rates as Sonnet 4."
+      }
+    },
+    {
+      "id": "claude-haiku-4-5",
+      "vendor": "anthropic",
+      "family": "claude-haiku",
+      "tier": "mini",
+      "context_window": 200000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["haiku-4-5"],
+        "exact_aliases": ["claude-haiku-4-5"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.00,
+        "output": 5.00,
+        "cache_read": 0.10,
+        "cache_creation": 1.25,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "prompt_caching"],
+      "released": "2025-10",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Anthropic Claude Haiku 4.5 list pricing"
+      }
+    },
+    {
+      "id": "claude-haiku-4",
+      "vendor": "anthropic",
+      "family": "claude-haiku",
+      "tier": "mini",
+      "context_window": 200000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["haiku-4"],
+        "exact_aliases": ["claude-haiku-4"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.00,
+        "output": 5.00,
+        "cache_read": 0.10,
+        "cache_creation": 1.25,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "prompt_caching"],
+      "released": "2025-05",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Anthropic Claude Haiku 4 list pricing"
+      }
+    },
+    {
+      "id": "claude-3-5-haiku",
+      "vendor": "anthropic",
+      "family": "claude-haiku",
+      "tier": "mini",
+      "context_window": 200000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["claude-3-5-haiku"],
+        "exact_aliases": ["claude-3-5-haiku-20241022", "claude-3-5-haiku-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.00,
+        "output": 5.00,
+        "cache_read": 0.10,
+        "cache_creation": 1.25,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "prompt_caching"],
+      "released": "2024-11",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Claude 3.5 Haiku (legacy). Same rates as Haiku 4."
+      }
+    },
+    {
+      "id": "claude-3-haiku",
+      "vendor": "anthropic",
+      "family": "claude-haiku",
+      "tier": "mini",
+      "context_window": 200000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["claude-3-haiku"],
+        "exact_aliases": ["claude-3-haiku-20240307"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.25,
+        "output": 1.25,
+        "cache_read": 0.03,
+        "cache_creation": 0.30,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-03",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/news/claude-3-family",
+        "note": "Claude 3 Haiku (original, much cheaper than 3.5/4 Haiku)."
+      }
+    },
+
+    { "_section": "── OpenAI GPT-5 family ──────────────────────────────" },
+    {
+      "id": "gpt-5-nano",
+      "vendor": "openai",
+      "family": "gpt-5",
+      "tier": "mini",
+      "context_window": 400000,
+      "max_output_tokens": 128000,
+      "match": {
+        "substring_keys": ["gpt-5-nano"],
+        "exact_aliases": ["gpt-5-nano"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.05,
+        "output": 0.40,
+        "cache_read": 0.005,
+        "cache_creation": 0.0,
+        "reasoning": 0.40
+      },
+      "capabilities": ["tools", "vision", "reasoning"],
+      "released": "2025-08",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "GPT-5 nano (cheapest GPT-5 variant)"
+      }
+    },
+    {
+      "id": "gpt-5-mini",
+      "vendor": "openai",
+      "family": "gpt-5",
+      "tier": "mini",
+      "context_window": 400000,
+      "max_output_tokens": 128000,
+      "match": {
+        "substring_keys": ["gpt-5-mini"],
+        "exact_aliases": ["gpt-5-mini"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.25,
+        "output": 2.00,
+        "cache_read": 0.025,
+        "cache_creation": 0.0,
+        "reasoning": 2.00
+      },
+      "capabilities": ["tools", "vision", "reasoning"],
+      "released": "2025-08",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "GPT-5 mini"
+      }
+    },
+    {
+      "id": "gpt-5-codex",
+      "vendor": "openai",
+      "family": "gpt-5",
+      "tier": "frontier",
+      "context_window": 400000,
+      "max_output_tokens": 128000,
+      "match": {
+        "substring_keys": ["gpt-5", "codex"],
+        "exact_aliases": ["gpt-5-codex"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.25,
+        "output": 10.00,
+        "cache_read": 0.125,
+        "cache_creation": 0.0,
+        "reasoning": 10.00
+      },
+      "capabilities": ["tools", "vision", "reasoning", "code"],
+      "released": "2025-09",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "GPT-5 codex variant (specialized for code)"
+      }
+    },
+    {
+      "id": "gpt-5",
+      "vendor": "openai",
+      "family": "gpt-5",
+      "tier": "frontier",
+      "context_window": 400000,
+      "max_output_tokens": 128000,
+      "match": {
+        "substring_keys": ["gpt-5"],
+        "exact_aliases": ["gpt-5", "gpt-5-2025-08-07"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.25,
+        "output": 10.00,
+        "cache_read": 0.125,
+        "cache_creation": 0.0,
+        "reasoning": 10.00
+      },
+      "capabilities": ["tools", "vision", "reasoning"],
+      "released": "2025-08",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "GPT-5 family base (catch-all after gpt-5-mini / gpt-5-nano / gpt-5-codex)"
+      }
+    },
+
+    { "_section": "── OpenAI o-series reasoning ────────────────────────" },
+    {
+      "id": "o4-mini",
+      "vendor": "openai",
+      "family": "o4",
+      "tier": "mini",
+      "context_window": 200000,
+      "max_output_tokens": 100000,
+      "match": {
+        "substring_keys": ["o4-mini"],
+        "exact_aliases": ["o4-mini"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.275,
+        "output": 1.10,
+        "cache_read": 0.0688,
+        "cache_creation": 0.0,
+        "reasoning": 1.10
+      },
+      "capabilities": ["tools", "reasoning"],
+      "released": "2025-04",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "OpenAI o4-mini reasoning model"
+      }
+    },
+    {
+      "id": "o3-mini",
+      "vendor": "openai",
+      "family": "o3",
+      "tier": "mini",
+      "context_window": 200000,
+      "max_output_tokens": 100000,
+      "match": {
+        "substring_keys": ["o3-mini"],
+        "exact_aliases": ["o3-mini"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.10,
+        "output": 4.40,
+        "cache_read": 0.55,
+        "cache_creation": 0.0,
+        "reasoning": 4.40
+      },
+      "capabilities": ["tools", "reasoning"],
+      "released": "2025-01",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "OpenAI o3-mini"
+      }
+    },
+    {
+      "id": "o3",
+      "vendor": "openai",
+      "family": "o3",
+      "tier": "frontier",
+      "context_window": 200000,
+      "max_output_tokens": 100000,
+      "match": {
+        "substring_keys": ["o3"],
+        "exact_aliases": ["o3", "o3-2025-04-16"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 2.00,
+        "output": 8.00,
+        "cache_read": 0.50,
+        "cache_creation": 0.0,
+        "reasoning": 8.00
+      },
+      "capabilities": ["tools", "reasoning"],
+      "released": "2025-04",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "OpenAI o3 (price-reduced from launch $10/$40 to $2/$8 in 2025-06)"
+      }
+    },
+    {
+      "id": "o1-mini",
+      "vendor": "openai",
+      "family": "o1",
+      "tier": "mini",
+      "context_window": 128000,
+      "max_output_tokens": 65536,
+      "match": {
+        "substring_keys": ["o1-mini"],
+        "exact_aliases": ["o1-mini", "o1-mini-2024-09-12"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.10,
+        "output": 4.40,
+        "cache_read": 0.55,
+        "cache_creation": 0.0,
+        "reasoning": 4.40
+      },
+      "capabilities": ["reasoning"],
+      "released": "2024-09",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "OpenAI o1-mini (legacy, superseded by o3-mini / o4-mini)"
+      }
+    },
+    {
+      "id": "o1",
+      "vendor": "openai",
+      "family": "o1",
+      "tier": "frontier",
+      "context_window": 200000,
+      "max_output_tokens": 100000,
+      "match": {
+        "substring_keys": ["o1"],
+        "exact_aliases": ["o1", "o1-2024-12-17", "o1-preview"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 15.00,
+        "output": 60.00,
+        "cache_read": 7.50,
+        "cache_creation": 0.0,
+        "reasoning": 60.00
+      },
+      "capabilities": ["tools", "reasoning"],
+      "released": "2024-12",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "OpenAI o1 (legacy, superseded by o3). Catch-all after o1-mini."
+      }
+    },
+
+    { "_section": "── OpenAI GPT-4 family (legacy but widely used) ─────" },
+    {
+      "id": "gpt-4o-mini",
+      "vendor": "openai",
+      "family": "gpt-4o",
+      "tier": "mini",
+      "context_window": 128000,
+      "max_output_tokens": 16384,
+      "match": {
+        "substring_keys": ["gpt-4o-mini"],
+        "exact_aliases": ["gpt-4o-mini", "gpt-4o-mini-2024-07-18"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.15,
+        "output": 0.60,
+        "cache_read": 0.075,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-07",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "GPT-4o mini (still receives traffic from older integrations)"
+      }
+    },
+    {
+      "id": "gpt-4o",
+      "vendor": "openai",
+      "family": "gpt-4o",
+      "tier": "mid",
+      "context_window": 128000,
+      "max_output_tokens": 16384,
+      "match": {
+        "substring_keys": ["gpt-4o"],
+        "exact_aliases": [
+          "gpt-4o",
+          "gpt-4o-2024-08-06",
+          "gpt-4o-2024-11-20",
+          "chatgpt-4o-latest"
+        ]
+      },
+      "pricing_per_1m_usd": {
+        "input": 2.50,
+        "output": 10.00,
+        "cache_read": 1.25,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-05",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "GPT-4o (catch-all after gpt-4o-mini)"
+      }
+    },
+    {
+      "id": "gpt-4-turbo",
+      "vendor": "openai",
+      "family": "gpt-4",
+      "tier": "mid",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["gpt-4-turbo"],
+        "exact_aliases": ["gpt-4-turbo", "gpt-4-turbo-2024-04-09"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 10.00,
+        "output": 30.00,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-04",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "GPT-4 Turbo (legacy)"
+      }
+    },
+    {
+      "id": "gpt-4",
+      "vendor": "openai",
+      "family": "gpt-4",
+      "tier": "mid",
+      "context_window": 8192,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["gpt-4"],
+        "exact_aliases": ["gpt-4", "gpt-4-0613"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 30.00,
+        "output": 60.00,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2023-03",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://openai.com/api/pricing/",
+        "note": "Original GPT-4 (catch-all, very legacy)"
+      }
+    },
+
+    { "_section": "── Google Gemini ────────────────────────────────────" },
+    {
+      "id": "gemini-2-5-pro",
+      "vendor": "google",
+      "family": "gemini-2",
+      "tier": "frontier",
+      "context_window": 2000000,
+      "max_output_tokens": 65536,
+      "match": {
+        "substring_keys": ["2.5-pro"],
+        "exact_aliases": ["gemini-2.5-pro", "gemini-2-5-pro"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.25,
+        "output": 5.00,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "audio", "video", "reasoning"],
+      "released": "2025-03",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://ai.google.dev/pricing",
+        "note": "Gemini 2.5 Pro (≤200K context; >200K is $2.50/$15)"
+      }
+    },
+    {
+      "id": "gemini-2-5-flash-lite",
+      "vendor": "google",
+      "family": "gemini-2",
+      "tier": "mini",
+      "context_window": 1000000,
+      "max_output_tokens": 65536,
+      "match": {
+        "substring_keys": ["flash-lite"],
+        "exact_aliases": ["gemini-2.5-flash-lite", "gemini-2-5-flash-lite"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.075,
+        "output": 0.30,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2025-06",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://ai.google.dev/pricing",
+        "note": "Gemini 2.5 Flash-Lite (cheapest Gemini)"
+      }
+    },
+    {
+      "id": "gemini-2-5-flash",
+      "vendor": "google",
+      "family": "gemini-2",
+      "tier": "mid",
+      "context_window": 1000000,
+      "max_output_tokens": 65536,
+      "match": {
+        "substring_keys": ["2.5-flash"],
+        "exact_aliases": ["gemini-2.5-flash", "gemini-2-5-flash"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.15,
+        "output": 0.60,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "reasoning"],
+      "released": "2025-04",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://ai.google.dev/pricing",
+        "note": "Gemini 2.5 Flash"
+      }
+    },
+    {
+      "id": "gemini-2-flash",
+      "vendor": "google",
+      "family": "gemini-2",
+      "tier": "mini",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["2.0-flash", "2-0-flash"],
+        "exact_aliases": ["gemini-2.0-flash", "gemini-2-0-flash"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.10,
+        "output": 0.40,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-12",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://ai.google.dev/pricing",
+        "note": "Gemini 2.0 Flash"
+      }
+    },
+    {
+      "id": "gemini-1-5-pro",
+      "vendor": "google",
+      "family": "gemini-1-5",
+      "tier": "mid",
+      "context_window": 2000000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["1.5-pro", "1-5-pro"],
+        "exact_aliases": ["gemini-1.5-pro", "gemini-1-5-pro"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.25,
+        "output": 5.00,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision", "audio"],
+      "released": "2024-05",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://ai.google.dev/pricing",
+        "note": "Gemini 1.5 Pro (≤128K; >128K is $2.50/$10). Legacy."
+      }
+    },
+    {
+      "id": "gemini-1-5-flash",
+      "vendor": "google",
+      "family": "gemini-1-5",
+      "tier": "mini",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["1.5-flash", "1-5-flash"],
+        "exact_aliases": ["gemini-1.5-flash", "gemini-1-5-flash"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.075,
+        "output": 0.30,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-05",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://ai.google.dev/pricing",
+        "note": "Gemini 1.5 Flash. Legacy."
+      }
+    },
+
+    { "_section": "── DeepSeek ─────────────────────────────────────────" },
+    {
+      "id": "deepseek-reasoner",
+      "vendor": "deepseek",
+      "family": "deepseek-r1",
+      "tier": "frontier",
+      "context_window": 64000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["deepseek-r1", "deepseek-reasoner"],
+        "exact_aliases": ["deepseek-reasoner", "deepseek-r1"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.55,
+        "output": 2.19,
+        "cache_read": 0.14,
+        "cache_creation": 0.0,
+        "reasoning": 2.19
+      },
+      "capabilities": ["tools", "reasoning"],
+      "released": "2025-01",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://api-docs.deepseek.com/quick_start/pricing",
+        "note": "DeepSeek-R1 reasoning model"
+      }
+    },
+    {
+      "id": "deepseek-chat",
+      "vendor": "deepseek",
+      "family": "deepseek-v3",
+      "tier": "mid",
+      "context_window": 64000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["deepseek-v3", "deepseek-chat", "deepseek-v4"],
+        "exact_aliases": ["deepseek-chat", "deepseek-v3", "deepseek-v4"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.27,
+        "output": 1.10,
+        "cache_read": 0.07,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-12",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://api-docs.deepseek.com/quick_start/pricing",
+        "note": "DeepSeek-V3 / Chat model. Covers V4 substring too."
+      }
+    },
+    {
+      "id": "deepseek-coder",
+      "vendor": "deepseek",
+      "family": "deepseek",
+      "tier": "mini",
+      "context_window": 32000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["deepseek-coder"],
+        "exact_aliases": ["deepseek-coder", "deepseek-coder-v2"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.014,
+        "output": 0.28,
+        "cache_read": 0.014,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "code"],
+      "released": "2024-06",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://api-docs.deepseek.com/quick_start/pricing",
+        "note": "DeepSeek Coder (legacy, folded into V3 / Chat)"
+      }
+    },
+
+    { "_section": "── Meta Llama (via Together / Groq / Fireworks) ─────" },
+    {
+      "id": "llama-3-3-70b",
+      "vendor": "meta",
+      "family": "llama-3",
+      "tier": "mid",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["llama-3.3-70b", "llama-3-3-70b"],
+        "exact_aliases": [
+          "llama-3.3-70b-instruct",
+          "meta-llama/Llama-3.3-70B-Instruct"
+        ]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.59,
+        "output": 0.79,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-12",
+      "source": {
+        "type": "third-party-host",
+        "url": "https://www.together.ai/pricing",
+        "note": "Llama 3.3 70B via Together AI. Price varies by host (Groq, Fireworks similar)."
+      }
+    },
+    {
+      "id": "llama-3-1-405b",
+      "vendor": "meta",
+      "family": "llama-3",
+      "tier": "frontier",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["llama-3.1-405b", "llama-3-1-405b", "405b"],
+        "exact_aliases": ["llama-3.1-405b-instruct"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 3.50,
+        "output": 3.50,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-07",
+      "source": {
+        "type": "third-party-host",
+        "url": "https://www.together.ai/pricing",
+        "note": "Llama 3.1 405B (flagship). Via Together AI."
+      }
+    },
+    {
+      "id": "llama-3-1-70b",
+      "vendor": "meta",
+      "family": "llama-3",
+      "tier": "mid",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["llama-3.1-70b", "llama-3-1-70b"],
+        "exact_aliases": ["llama-3.1-70b-instruct"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.59,
+        "output": 0.79,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-07",
+      "source": {
+        "type": "third-party-host",
+        "url": "https://www.together.ai/pricing",
+        "note": "Llama 3.1 70B"
+      }
+    },
+    {
+      "id": "llama-3-1-8b",
+      "vendor": "meta",
+      "family": "llama-3",
+      "tier": "mini",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["llama-3.1-8b", "llama-3-1-8b", "llama-3-8b"],
+        "exact_aliases": ["llama-3.1-8b-instruct"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.18,
+        "output": 0.18,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-07",
+      "source": {
+        "type": "third-party-host",
+        "url": "https://www.together.ai/pricing",
+        "note": "Llama 3.1 8B"
+      }
+    },
+
+    { "_section": "── Alibaba Qwen ─────────────────────────────────────" },
+    {
+      "id": "qwen-max",
+      "vendor": "alibaba",
+      "family": "qwen",
+      "tier": "frontier",
+      "context_window": 32000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["qwen-max", "qwen3-max", "qwen3.6-max"],
+        "exact_aliases": ["qwen-max", "qwen-max-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 1.60,
+        "output": 6.40,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-09",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.alibabacloud.com/help/en/model-studio/getting-started/models",
+        "note": "Qwen-Max (flagship)"
+      }
+    },
+    {
+      "id": "qwen-plus",
+      "vendor": "alibaba",
+      "family": "qwen",
+      "tier": "mid",
+      "context_window": 128000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["qwen-plus", "qwen3-plus", "qwen3.6-plus"],
+        "exact_aliases": ["qwen-plus", "qwen-plus-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.40,
+        "output": 1.20,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-09",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.alibabacloud.com/help/en/model-studio/getting-started/models",
+        "note": "Qwen-Plus"
+      }
+    },
+    {
+      "id": "qwen-turbo",
+      "vendor": "alibaba",
+      "family": "qwen",
+      "tier": "mini",
+      "context_window": 1000000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["qwen-turbo", "qwen3-turbo"],
+        "exact_aliases": ["qwen-turbo", "qwen-turbo-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.05,
+        "output": 0.20,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2024-09",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.alibabacloud.com/help/en/model-studio/getting-started/models",
+        "note": "Qwen-Turbo (cheapest)"
+      }
+    },
+    {
+      "id": "qwq-32b",
+      "vendor": "alibaba",
+      "family": "qwen",
+      "tier": "mid",
+      "context_window": 32000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["qwq-32b"],
+        "exact_aliases": ["qwq-32b-preview", "qwq-32b"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.15,
+        "output": 0.60,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.60
+      },
+      "capabilities": ["reasoning"],
+      "released": "2024-11",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://www.alibabacloud.com/help/en/model-studio/getting-started/models",
+        "note": "QwQ-32B reasoning model"
+      }
+    },
+
+    { "_section": "── Mistral ──────────────────────────────────────────" },
+    {
+      "id": "mistral-large",
+      "vendor": "mistral",
+      "family": "mistral",
+      "tier": "frontier",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["mistral-large"],
+        "exact_aliases": ["mistral-large-latest", "mistral-large-2411"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 2.00,
+        "output": 6.00,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-11",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://mistral.ai/technology/#pricing",
+        "note": "Mistral Large 2"
+      }
+    },
+    {
+      "id": "mistral-medium",
+      "vendor": "mistral",
+      "family": "mistral",
+      "tier": "mid",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["mistral-medium"],
+        "exact_aliases": ["mistral-medium-latest", "mistral-medium-3"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.40,
+        "output": 2.00,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2025-05",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://mistral.ai/technology/#pricing",
+        "note": "Mistral Medium 3"
+      }
+    },
+    {
+      "id": "mistral-small",
+      "vendor": "mistral",
+      "family": "mistral",
+      "tier": "mini",
+      "context_window": 128000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["mistral-small"],
+        "exact_aliases": ["mistral-small-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.10,
+        "output": 0.30,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools"],
+      "released": "2025-01",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://mistral.ai/technology/#pricing",
+        "note": "Mistral Small"
+      }
+    },
+    {
+      "id": "codestral",
+      "vendor": "mistral",
+      "family": "codestral",
+      "tier": "mid",
+      "context_window": 32000,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["codestral"],
+        "exact_aliases": ["codestral-latest", "codestral-2501"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 0.30,
+        "output": 0.90,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "code"],
+      "released": "2024-05",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://mistral.ai/technology/#pricing",
+        "note": "Codestral (Mistral's code specialist)"
+      }
+    },
+
+    { "_section": "── xAI Grok ─────────────────────────────────────────" },
+    {
+      "id": "grok-4",
+      "vendor": "xai",
+      "family": "grok",
+      "tier": "frontier",
+      "context_window": 256000,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["grok-4"],
+        "exact_aliases": ["grok-4", "grok-4-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 3.00,
+        "output": 15.00,
+        "cache_read": 0.75,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2025-12",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://docs.x.ai/docs/models",
+        "note": "Grok 4 (xAI flagship). Verify before production use."
+      }
+    },
+    {
+      "id": "grok-3",
+      "vendor": "xai",
+      "family": "grok",
+      "tier": "mid",
+      "context_window": 131072,
+      "max_output_tokens": 8192,
+      "match": {
+        "substring_keys": ["grok-3"],
+        "exact_aliases": ["grok-3", "grok-3-latest"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 3.00,
+        "output": 15.00,
+        "cache_read": 0.75,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2025-02",
+      "source": {
+        "type": "vendor-official",
+        "url": "https://docs.x.ai/docs/models",
+        "note": "Grok 3"
+      }
+    },
+    {
+      "id": "grok-2",
+      "vendor": "xai",
+      "family": "grok",
+      "tier": "mid",
+      "context_window": 131072,
+      "max_output_tokens": 4096,
+      "match": {
+        "substring_keys": ["grok-2"],
+        "exact_aliases": ["grok-2", "grok-2-1212"]
+      },
+      "pricing_per_1m_usd": {
+        "input": 2.00,
+        "output": 10.00,
+        "cache_read": 0.0,
+        "cache_creation": 0.0,
+        "reasoning": 0.0
+      },
+      "capabilities": ["tools", "vision"],
+      "released": "2024-08",
+      "deprecated": true,
+      "source": {
+        "type": "vendor-official",
+        "url": "https://docs.x.ai/docs/models",
+        "note": "Grok 2 (legacy)"
+      }
+    }
+  ]
+}
