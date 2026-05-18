@@ -1,0 +1,38 @@
+[package]
+name = "petpet-desktop"
+version = "0.1.0"
+description = "petpet desktop app — floating pixel pet driven by usage events"
+edition = "2021"
+
+[lib]
+name = "petpet_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+petpet = { path = "../.." }
+tauri = { version = "2", features = ["protocol-asset", "macos-private-api", "tray-icon"] }
+# File-picker dialogs for Export… / Import… flows. Cross-platform via
+# the OS-native picker, so users get the familiar Save / Open sheet.
+tauri-plugin-dialog = "2"
+# Reveals folders / files in the OS file manager (Finder / Explorer /
+# Nautilus). Used by the "Open template folder" follow-up after a
+# user scaffolds a new template — they immediately need to drop sprite
+# PNGs into the stage subfolders.
+tauri-plugin-opener = "2"
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync"] }
+tokio-util = "0.7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSWindow", "NSResponder"] }

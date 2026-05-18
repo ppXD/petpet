@@ -1,0 +1,106 @@
+/* Naming popup — floats above the pet, sized to its content. Reuses
+ * .gba-box / .gba-title / .gba-button from App.css so the visual
+ * matches the rest of the GBA-themed UI. */
+
+.naming-panel {
+  width: 280px;
+  max-width: 100%;
+  padding: 10px 12px 11px;
+  font-size: 10px;
+  line-height: 1.5;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  color: #1a1a1a;
+  animation: naming-pop 0.18s ease-out;
+}
+
+.naming-title {
+  font-size: 11px;
+  padding: 2px 0 9px;
+  border-bottom-width: 2px;
+  text-shadow: 1px 1px 0 #d8d8d8;
+}
+
+.naming-body {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding: 2px 0 0;
+}
+
+.naming-text {
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.7;
+  color: #1a1a1a;
+  padding: 0 2px;
+}
+
+.naming-panel input {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  color: #1a1a1a;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px #fff, inset 0 0 0 3px #d8d8d8;
+  letter-spacing: 0.05em;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.naming-panel input:focus { background: #fff8c8; }
+
+.naming-actions {
+  gap: 8px;
+  margin-top: 2px;
+  display: flex;
+  justify-content: space-between;
+}
+.naming-actions .gba-button {
+  font-size: 10px;
+  padding: 8px 10px;
+  flex: 1 1 0;
+  max-width: none;
+  box-shadow:
+    inset 0 0 0 1px #ffffff,
+    inset 0 0 0 3px #d8d8d8,
+    0 3px 0 #1a1a1a;
+}
+.naming-actions .gba-button.primary {
+  box-shadow:
+    inset 0 0 0 1px #6098e8,
+    inset 0 0 0 3px #2050a0,
+    0 3px 0 #102868;
+}
+.naming-actions .gba-button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 0 0 1px #ffffff,
+    inset 0 0 0 3px #d8d8d8,
+    0 0 0 #1a1a1a;
+}
+.naming-actions .gba-button.primary:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 0 0 1px #6098e8,
+    inset 0 0 0 3px #2050a0,
+    0 0 0 #102868;
+}
+
+@keyframes naming-pop {
+  from {
+    transform: translateY(-6px) scale(0.96);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}

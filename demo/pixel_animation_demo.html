@@ -1,0 +1,1157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Petpet · Pixel Animation Demo</title>
+<style>
+  :root {
+    --bg: #14141c;
+    --panel: #22222e;
+    --panel-2: #2a2a38;
+    --border: #34344a;
+    --text: #e8e8f0;
+    --muted: #8888a0;
+    --accent: #a78bfa;
+    --accent-hi: #c4b1ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 32px;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Mono", monospace;
+    min-height: 100vh;
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; font-weight: 600; }
+  .subtitle { color: var(--muted); margin: 0 0 28px; font-size: 13px; }
+  h2 { margin: 0 0 16px; font-size: 14px; color: var(--muted); font-weight: 500;
+       text-transform: uppercase; letter-spacing: 0.08em; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+  .cell {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; text-align: center;
+  }
+  .cell h3 { margin: 0 0 10px; font-size: 14px; font-weight: 500; }
+  .cell canvas {
+    width: 160px; height: 160px;
+    image-rendering: pixelated;
+    background:
+      radial-gradient(circle at 50% 100%, #2a2845 0%, transparent 60%),
+      linear-gradient(180deg, #0a0a18 0%, #15151f 100%);
+    border-radius: 8px; cursor: pointer;
+  }
+  .stage-label { color: var(--muted); font-size: 11px; margin: 6px 0 10px; min-height: 14px; }
+  .ctrls { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+  button {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--border);
+    padding: 5px 10px; border-radius: 6px;
+    font-family: inherit; font-size: 11px; cursor: pointer;
+    transition: all 0.15s;
+  }
+  button:hover { background: var(--border); border-color: var(--accent); }
+  button:active { transform: scale(0.95); }
+  button.primary { background: var(--accent); border-color: var(--accent-hi); color: #14141c; font-weight: 600; }
+  button.primary:hover { background: var(--accent-hi); }
+
+  .cinema {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px; margin-bottom: 32px;
+  }
+  .cinema-row { display: flex; gap: 24px; align-items: center; }
+  .cinema canvas {
+    width: 320px; height: 320px;
+    image-rendering: pixelated;
+    background:
+      radial-gradient(circle at 50% 70%, #2a2845 0%, transparent 60%),
+      linear-gradient(180deg, #0a0a18 0%, #15151f 100%);
+    border-radius: 8px;
+  }
+  .cinema-info { flex: 1; }
+  .narrate {
+    font-size: 14px; min-height: 24px; color: var(--accent-hi); font-weight: 500;
+    margin-bottom: 8px;
+  }
+  .step-label {
+    display: inline-block; padding: 2px 8px; border-radius: 4px;
+    background: var(--panel-2); font-size: 11px; color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .timeline {
+    margin-top: 16px; height: 4px; background: var(--panel-2);
+    border-radius: 2px; overflow: hidden;
+  }
+  .timeline-fill { height: 100%; background: var(--accent); width: 0%; transition: none; }
+
+  .parade {
+    background: var(--panel); border: 1px solid var(--border);
+    border-radius: 12px; padding: 24px;
+  }
+  .parade-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+    margin-top: 12px;
+  }
+  .parade-cell { text-align: center; padding: 12px; background: var(--panel-2); border-radius: 8px; }
+  .parade-cell canvas { width: 128px; height: 128px; image-rendering: pixelated;
+    background: linear-gradient(180deg, #0a0a18, #15151f); border-radius: 6px; }
+  .parade-cell .name { font-size: 12px; color: var(--muted); margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<h1>🐣 Petpet · Pixel Animation Demo</h1>
+<p class="subtitle">
+  All sprites + animations rendered procedurally — zero asset files.
+  The 3 eggs preview the 3-species design; the slime is the existing
+  <code>Pet.tsx</code> renderer with effects layered on top.
+</p>
+
+<h2>1 · Eggs &amp; Ceremonies (click any button)</h2>
+<div class="grid">
+  <div class="cell">
+    <h3>🌫️ Mist Egg</h3>
+    <canvas id="c-mist" width="64" height="64"></canvas>
+    <div class="stage-label" id="lbl-mist">Lv 0 · Mist Egg</div>
+    <div class="ctrls">
+      <button onclick="cer('mist','shake')">Shake</button>
+      <button onclick="cer('mist','crack')">Crack</button>
+      <button onclick="cer('mist','hatch')">Hatch ✨</button>
+      <button onclick="cer('mist','levelup')">Level Up</button>
+    </div>
+  </div>
+
+  <div class="cell">
+    <h3>🔥 Ember Egg</h3>
+    <canvas id="c-ember" width="64" height="64"></canvas>
+    <div class="stage-label" id="lbl-ember">Lv 0 · Ember Egg</div>
+    <div class="ctrls">
+      <button onclick="cer('ember','shake')">Shake</button>
+      <button onclick="cer('ember','crack')">Crack</button>
+      <button onclick="cer('ember','hatch')">Hatch ✨</button>
+      <button onclick="cer('ember','levelup')">Level Up</button>
+    </div>
+  </div>
+
+  <div class="cell">
+    <h3>⚫ Onyx Egg</h3>
+    <canvas id="c-onyx" width="64" height="64"></canvas>
+    <div class="stage-label" id="lbl-onyx">Lv 0 · Onyx Egg</div>
+    <div class="ctrls">
+      <button onclick="cer('onyx','shake')">Shake</button>
+      <button onclick="cer('onyx','crack')">Crack</button>
+      <button onclick="cer('onyx','hatch')">Hatch ✨</button>
+      <button onclick="cer('onyx','levelup')">Level Up</button>
+    </div>
+  </div>
+
+  <div class="cell">
+    <h3>🟢 Slime (existing)</h3>
+    <canvas id="c-slime" width="64" height="64"></canvas>
+    <div class="stage-label">Pet.tsx renderer</div>
+    <div class="ctrls">
+      <button onclick="cer('slime','eat')">Eat</button>
+      <button onclick="cer('slime','damage')">Damage</button>
+      <button onclick="cer('slime','levelup')">Level Up</button>
+      <button onclick="cer('slime','satisfied')">Sparkle</button>
+    </div>
+  </div>
+</div>
+
+<h2>2 · Full Hatch Ceremony (orchestrated sequence)</h2>
+<div class="cinema">
+  <div class="cinema-row">
+    <canvas id="c-cinema" width="64" height="64"></canvas>
+    <div class="cinema-info">
+      <div class="step-label" id="cinema-step">Idle</div>
+      <div class="narrate" id="cinema-narrate">Press ▶ to watch a full L0 → L1 hatch from idle to chick reveal.</div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button class="primary" onclick="playFullHatch()">▶ Play Hatch Ceremony</button>
+        <button onclick="resetCinema()">Reset</button>
+      </div>
+      <div class="timeline"><div class="timeline-fill" id="cinema-timeline"></div></div>
+    </div>
+  </div>
+</div>
+
+<h2>3 · Standalone Effects (continuous parade — these are the "ceremony kinds")</h2>
+<div class="parade">
+  <div class="parade-grid">
+    <div class="parade-cell">
+      <canvas id="fx-flash" width="48" height="48"></canvas>
+      <div class="name"><code>kind: "overlay"</code> — radial flash</div>
+    </div>
+    <div class="parade-cell">
+      <canvas id="fx-ring" width="48" height="48"></canvas>
+      <div class="name"><code>kind: "ring"</code> — expanding pulse</div>
+    </div>
+    <div class="parade-cell">
+      <canvas id="fx-particles" width="48" height="48"></canvas>
+      <div class="name"><code>kind: "particle"</code> — burst</div>
+    </div>
+    <div class="parade-cell">
+      <canvas id="fx-sparkles" width="48" height="48"></canvas>
+      <div class="name"><code>kind: "sparkle"</code> — drifting stars</div>
+    </div>
+    <div class="parade-cell">
+      <canvas id="fx-confetti" width="48" height="48"></canvas>
+      <div class="name"><code>kind: "confetti"</code> — rain</div>
+    </div>
+    <div class="parade-cell">
+      <canvas id="fx-bubble" width="48" height="48"></canvas>
+      <div class="name"><code>kind: "bubble"</code> — speech</div>
+    </div>
+  </div>
+</div>
+
+<script>
+//══════════════════════════════════════════════════════════════════════
+// Egg sprites — hand-authored 16×16 pixel grids.
+// '.' = transparent, other chars = palette lookups.
+//══════════════════════════════════════════════════════════════════════
+
+const MIST = {
+  palette: { O:'#5a7caf', M:'#3d5a85', L:'#ecf3f9', S:'#b8d2ec', H:'#ffffff', D:'#2c4267' },
+  sprite: [
+    "................",
+    ".......OOO......",
+    "......OLHLO.....",
+    ".....OLLLLLO....",
+    "....OLLLLLLLO...",
+    "...OLLLSLLLLLO..",
+    "...OLLLLLLLLLO..",
+    "..OLLLLLLLSLLLO.",
+    "..OLLLLLLLLLLLO.",
+    "..OLLLSLLLLLLLO.",
+    "..OLLLLLLLLLLLO.",
+    "..OLLLLLLLLSLLO.",
+    "..OMLLLLLLLLLMO.",
+    "...OMLLLLLLLLMO.",
+    "....OMMLLLLMMO..",
+    ".....OOMMMMOO...",
+  ]
+};
+
+const EMBER = {
+  palette: { O:'#7a1a08', M:'#4a0c04', L:'#ff8038', S:'#ffd460', H:'#fff0a0', D:'#2a0602' },
+  sprite: [
+    "................",
+    ".......OOO......",
+    "......OLHLO.....",
+    ".....OLLLLLO....",
+    "....OLLSLLLLO...",
+    "...OLLLLLLLLLO..",
+    "...OLLLLSLLLLO..",
+    "..OLLLLLLLLLLLO.",
+    "..OLLSLLLLLSLLO.",
+    "..OLLLLLLLLLLLO.",
+    "..OLLLLLSLLLLLO.",
+    "..OLLLLLLLLLLLO.",
+    "..OMLLLLLLLLLMO.",
+    "...OMLLLLLLLLMO.",
+    "....OMMLLLLMMO..",
+    ".....OOMMMMOO...",
+  ]
+};
+
+const ONYX = {
+  palette: { O:'#1a1525', M:'#0a060f', L:'#3a3050', S:'#9778dc', H:'#c8a8ff', D:'#050308' },
+  sprite: [
+    "................",
+    ".......OOO......",
+    "......OLLLO.....",
+    ".....OLLSLLO....",
+    "....OLLLLLLLO...",
+    "...OLLLLLLLLLO..",
+    "...OLLSLLLLSLO..",
+    "..OLLLLLLLLLLLO.",
+    "..OLLLLLHLLLLLO.",
+    "..OLLLLLLLLSLLO.",
+    "..OLLSLLLLLLLLO.",
+    "..OLLLLLLLLLLLO.",
+    "..OMLLLLLLLLLMO.",
+    "...OMLLLLLLLLMO.",
+    "....OMMLLLLMMO..",
+    ".....OOMMMMOO...",
+  ]
+};
+
+//══════════════════════════════════════════════════════════════════════
+// Hatchling sprites (the post-hatch creatures). 16×16.
+//══════════════════════════════════════════════════════════════════════
+
+const MIST_WISP = {
+  palette: { O:'#3d5a85', B:'#7eb0e8', H:'#ffffff', E:'#0a0a14', M:'#daedfb' },
+  sprite: [
+    "................",
+    "................",
+    ".....OBBBBBO....",
+    "....OBBBBBBBO...",
+    "...OBBBBBBBBBO..",
+    "...OBBHHBHHBBO..",  // eyes white
+    "...OBEEBBEEBBO..",  // eyes pupil
+    "...OBBBBBBBBBO..",
+    "..OBBBBBBBBBBBO.",
+    "..OBBBBBEBBBBBO.",  // mouth
+    "..OBBBBBEEBBBBO.",
+    "...OBBBBBBBBBO..",
+    "....OBBBBBBBO...",
+    "....OMMOMMOMMO..",
+    ".....OMOOMOOMO..",
+    "................",
+  ]
+};
+
+const EMBER_FLICKER = {
+  palette: { O:'#7a1a08', B:'#ff7028', F:'#ffc850', H:'#ffffff', E:'#0a0a14', M:'#ffe080' },
+  sprite: [
+    "...F............",
+    "..FFF...F.......",
+    "...F...FFF......",
+    ".....F..F.......",
+    "....OBBBBBO.....",
+    "...OBBBBBBBO....",
+    "...OBHHBHHBO....",
+    "...OBEEBBEEBO...",
+    "..OBBBBBBBBBO...",
+    "..OBBBBEBBBBO...",
+    "..OBBBEEEBBBO...",
+    "...OBBBBBBBO....",
+    "....OBBBBBO.....",
+    "....OMOMMMO.....",
+    ".....OOOOO......",
+    "................",
+  ]
+};
+
+const ONYX_SHADELING = {
+  palette: { O:'#0a060f', B:'#3a3050', S:'#9778dc', H:'#c8a8ff', E:'#000000', M:'#1a1525' },
+  sprite: [
+    "...S............",
+    "..S.S.....S.....",
+    "...S.....S.S....",
+    "....OBBBBBO.....",
+    "...OBBBBBBBO....",
+    "...OBHHBHHBO....",  // glowing purple eyes
+    "...OBSSBBSSBO...",
+    "..OBBBBBBBBBO...",
+    "..OBBSBBBSBBO...",
+    "..OBBBSSSBBBO...",
+    "..OBBBBBBBBBO...",
+    "...OBBBBBBBO....",
+    "....OMMMMM O....",
+    ".....OOOOO......",
+    "................",
+    "................",
+  ]
+};
+
+//══════════════════════════════════════════════════════════════════════
+// Slime — direct port of desktop/src/Pet.tsx logic to canvas.
+//══════════════════════════════════════════════════════════════════════
+
+const SLIME_COLORS = {
+  body: '#6ee7b7', shadow: '#10b981', dark: '#047857',
+  eye: '#0b1020', sheen: '#ffffff', mouth: '#0b1020',
+  sweat: '#60a5fa', spark: '#fde047',
+};
+
+function drawSlime(ctx, x, y, scale, mood = 'idle', tintColor = null, tintAlpha = 0) {
+  const C = SLIME_COLORS;
+  const px = (col, row, w, h, color, alpha = 1) => {
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    ctx.fillRect(x + col * scale, y + row * scale, w * scale, h * scale);
+  };
+
+  px(5, 3, 6, 1, C.shadow);
+  px(4, 4, 8, 1, C.shadow);
+  px(3, 5, 10, 1, C.shadow);
+  px(2, 6, 12, 6, C.body);
+  px(3, 12, 10, 1, C.body);
+  px(4, 5, 2, 1, C.sheen, 0.6);
+  px(3, 6, 1, 2, C.sheen, 0.45);
+  px(2, 11, 12, 1, C.shadow);
+  px(3, 12, 10, 1, C.dark);
+  px(5, 7, 2, 2, C.sheen);
+  px(9, 7, 2, 2, C.sheen);
+
+  const pupilRow = mood === 'thinking' ? 7 : mood === 'working' ? 9 : 8;
+  px(5, pupilRow, 2, 1, C.eye);
+  px(9, pupilRow, 2, 1, C.eye);
+
+  if (mood === 'eating') {
+    px(7, 10, 2, 2, C.mouth);
+  } else if (mood === 'satisfied') {
+    px(6, 10, 1, 1, C.mouth);
+    px(9, 10, 1, 1, C.mouth);
+    px(7, 11, 2, 1, C.mouth);
+    // sparkles
+    px(2, 3, 1, 1, C.spark);
+    px(13, 2, 1, 1, C.spark);
+    px(14, 6, 1, 1, C.spark);
+    px(1, 8, 1, 1, C.spark);
+  } else {
+    px(6, 10, 1, 1, C.mouth);
+    px(7, 11, 2, 1, C.mouth);
+    px(9, 10, 1, 1, C.mouth);
+  }
+
+  ctx.globalAlpha = 1;
+
+  // Damage tint overlay
+  if (tintColor && tintAlpha > 0) {
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.globalAlpha = tintAlpha;
+    ctx.fillStyle = tintColor;
+    ctx.fillRect(x + 2 * scale, y + 3 * scale, 12 * scale, 10 * scale);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = 1;
+  }
+}
+
+//══════════════════════════════════════════════════════════════════════
+// Generic sprite drawer.
+//══════════════════════════════════════════════════════════════════════
+
+function drawSprite(ctx, def, x, y, scale, alpha = 1) {
+  ctx.globalAlpha = alpha;
+  for (let r = 0; r < def.sprite.length; r++) {
+    const line = def.sprite[r];
+    for (let c = 0; c < line.length; c++) {
+      const ch = line[c];
+      if (ch === '.') continue;
+      const color = def.palette[ch];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(x + c * scale, y + r * scale, scale, scale);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+//══════════════════════════════════════════════════════════════════════
+// Effects — overlay drawers given (ctx, elapsed_ms, x, y, scale).
+// elapsed_ms = time since ceremony fired. Each returns true while
+// still playing.
+//══════════════════════════════════════════════════════════════════════
+
+function fxRadialFlash(ctx, t, cx, cy, opts = {}) {
+  const dur = opts.duration_ms ?? 600;
+  if (t > dur) return false;
+  const p = t / dur;
+  const radius = p * (opts.maxR ?? 80);
+  const alpha = (1 - p) * (opts.alpha ?? 0.9);
+  const color = opts.color ?? '#fff8c8';
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  g.addColorStop(0, color + Math.floor(alpha * 255).toString(16).padStart(2, '0'));
+  g.addColorStop(0.6, color + '40');
+  g.addColorStop(1, color + '00');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  return true;
+}
+
+function fxRing(ctx, t, cx, cy, opts = {}) {
+  const dur = opts.duration_ms ?? 1000;
+  if (t > dur) return false;
+  const p = t / dur;
+  const radius = p * (opts.maxR ?? 70);
+  const alpha = (1 - p);
+  ctx.strokeStyle = opts.color ?? '#fff8c8';
+  ctx.globalAlpha = alpha;
+  ctx.lineWidth = 3;
+  // Pixelated ring: draw squares around perimeter
+  const steps = Math.floor(2 * Math.PI * radius / 4);
+  for (let i = 0; i < steps; i++) {
+    const a = (i / steps) * Math.PI * 2;
+    const x = cx + Math.cos(a) * radius;
+    const y = cy + Math.sin(a) * radius;
+    ctx.fillStyle = opts.color ?? '#fff8c8';
+    ctx.fillRect(Math.floor(x / 2) * 2 - 2, Math.floor(y / 2) * 2 - 2, 4, 4);
+  }
+  ctx.globalAlpha = 1;
+  return true;
+}
+
+// Particle systems — store state outside the per-frame function.
+const particleSystems = new Map(); // key: canvas+effect, value: {particles, born}
+
+function makeParticles(key, count, cx, cy, opts = {}) {
+  const ps = { particles: [], born: performance.now(), opts };
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.3;
+    const speed = (opts.speedMin ?? 60) + Math.random() * (opts.speedRange ?? 60);
+    ps.particles.push({
+      x: cx + (Math.random() - 0.5) * 4,
+      y: cy + (Math.random() - 0.5) * 4,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed - (opts.upBias ?? 0),
+      size: opts.size ?? 3,
+      color: opts.colors ? opts.colors[Math.floor(Math.random() * opts.colors.length)] : '#fff',
+      life: opts.life ?? 1.2,
+      gravity: opts.gravity ?? 0,
+      rot: Math.random() * Math.PI,
+      rotVel: (Math.random() - 0.5) * 5,
+    });
+  }
+  particleSystems.set(key, ps);
+}
+
+function drawParticles(ctx, key, dt) {
+  const ps = particleSystems.get(key);
+  if (!ps) return false;
+  let alive = false;
+  for (const p of ps.particles) {
+    p.life -= dt;
+    if (p.life <= 0) continue;
+    alive = true;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += p.gravity * dt;
+    p.rot += p.rotVel * dt;
+    const a = Math.min(1, p.life);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.color;
+    if (ps.opts.shape === 'square') {
+      const s = p.size;
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.fillRect(-s / 2, -s / 2, s, s);
+      ctx.restore();
+    } else {
+      ctx.fillRect(p.x - p.size / 2, p.y - p.size / 2, p.size, p.size);
+    }
+  }
+  ctx.globalAlpha = 1;
+  if (!alive) particleSystems.delete(key);
+  return alive;
+}
+
+function fxSparkles(ctx, t, key, cx, cy) {
+  // Twinkling stars that drift up
+  const dur = 1500;
+  if (t > dur) return false;
+  if (t < 50) {
+    const cols = ['#fff', '#ffd75a', '#ffb030', '#c8a8ff'];
+    makeParticles(key, 14, cx, cy - 10, {
+      speedMin: 20, speedRange: 30, upBias: 50, life: 1.4,
+      gravity: -10, size: 3, colors: cols, shape: 'square'
+    });
+  }
+  // Drift handled by drawParticles, but we want sparkle twinkle:
+  const ps = particleSystems.get(key);
+  if (!ps) return false;
+  let alive = false;
+  for (const p of ps.particles) {
+    p.life -= 0.016;
+    if (p.life <= 0) continue;
+    alive = true;
+    p.x += p.vx * 0.016;
+    p.y += p.vy * 0.016;
+    p.vy += p.gravity * 0.016;
+    // Twinkle: alternating star + dot
+    const twinkle = Math.floor(t / 80 + p.x) % 4;
+    ctx.globalAlpha = Math.min(1, p.life);
+    ctx.fillStyle = p.color;
+    if (twinkle < 2) {
+      ctx.fillRect(p.x - 0.5, p.y - 2, 1, 4);
+      ctx.fillRect(p.x - 2, p.y - 0.5, 4, 1);
+    } else {
+      ctx.fillRect(p.x - 1, p.y - 1, 2, 2);
+    }
+  }
+  ctx.globalAlpha = 1;
+  if (!alive) particleSystems.delete(key);
+  return alive;
+}
+
+// Cracks: progressive line pattern overlay on egg.
+function fxCracks(ctx, t, cx, cy, scale = 4) {
+  const dur = 1200;
+  if (t > dur) return false;
+  const p = Math.min(1, t / dur);
+  // 5 crack lines, appearing one by one
+  const cracks = [
+    [[-12, 0], [-8, -4], [-4, 2], [-2, -2], [2, 4]],
+    [[14, 4], [10, 0], [6, 4], [2, 0]],
+    [[0, -16], [-2, -10], [2, -6], [-2, -2], [4, 2]],
+    [[8, -8], [4, -4], [6, 0], [2, 4]],
+    [[-8, 8], [-4, 4], [0, 8], [4, 4]],
+  ];
+  ctx.strokeStyle = '#1a0a05';
+  ctx.fillStyle = '#1a0a05';
+  ctx.globalAlpha = 0.9;
+  for (let i = 0; i < cracks.length; i++) {
+    const start = i / cracks.length;
+    const visible = Math.max(0, Math.min(1, (p - start) * (cracks.length + 1)));
+    if (visible <= 0) continue;
+    const path = cracks[i];
+    const endIdx = Math.floor(path.length * visible);
+    for (let j = 0; j < endIdx; j++) {
+      const px = cx + path[j][0];
+      const py = cy + path[j][1];
+      ctx.fillRect(px - 1, py - 1, 2, 2);
+    }
+  }
+  ctx.globalAlpha = 1;
+  return true;
+}
+
+// Shake offset (returns [x, y] additive offset)
+function shakeOffset(t, intensity = 4, dur = 1500) {
+  if (t > dur) return [0, 0];
+  const p = 1 - t / dur; // fade out shake
+  return [
+    (Math.random() - 0.5) * intensity * p * 2,
+    (Math.random() - 0.5) * intensity * p * 2,
+  ];
+}
+
+//══════════════════════════════════════════════════════════════════════
+// Per-canvas state + main loop.
+//══════════════════════════════════════════════════════════════════════
+
+const SCALE = 4;     // 16×16 → 64px sprite
+const SPRITE_PX = 16 * SCALE;
+
+const cells = ['mist', 'ember', 'onyx', 'slime'];
+const eggDefs = { mist: MIST, ember: EMBER, onyx: ONYX };
+const chickDefs = { mist: MIST_WISP, ember: EMBER_FLICKER, onyx: ONYX_SHADELING };
+const stageLabels = {
+  mist: { 0: 'Lv 0 · Mist Egg', 1: 'Lv 1 · Wisp 🌫️' },
+  ember: { 0: 'Lv 0 · Ember Egg', 1: 'Lv 1 · Flicker 🔥' },
+  onyx: { 0: 'Lv 0 · Onyx Egg', 1: 'Lv 1 · Shadeling ⚫' },
+};
+
+const states = {};
+for (const k of cells) {
+  states[k] = { ceremony: null, t0: 0, level: 0, mood: 'idle' };
+}
+
+function cer(species, kind) {
+  const s = states[species];
+  s.ceremony = kind;
+  s.t0 = performance.now();
+  // Slime mood swap on simple kinds
+  if (species === 'slime') {
+    if (kind === 'eat') s.mood = 'eating';
+    else if (kind === 'satisfied') s.mood = 'satisfied';
+    else if (kind === 'damage') s.mood = 'thinking';
+  }
+}
+
+function centerOf(canvas) {
+  return { cx: canvas.width / 2, cy: canvas.height / 2 };
+}
+
+function spriteOriginFor(canvas) {
+  // 16×16 sprite at SCALE=4 → 64px sprite. Center it in canvas.
+  return {
+    x: (canvas.width - SPRITE_PX) / 2,
+    y: (canvas.height - SPRITE_PX) / 2,
+  };
+}
+
+function renderCell(name, now) {
+  const canvas = document.getElementById('c-' + name);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const state = states[name];
+  const origin = spriteOriginFor(canvas);
+  const center = centerOf(canvas);
+
+  // Idle motion: gentle bob (sine)
+  const bobY = Math.sin(now / 600) * 1.5;
+
+  // Ceremony-driven offsets / phase
+  let extraX = 0, extraY = 0;
+  let ceremonyOver = false;
+  let elapsed = state.ceremony ? now - state.t0 : 0;
+
+  // Always draw the current stage sprite (egg or chick).
+  // Use small floor-rounding to keep pixel grid clean.
+  let spriteAlpha = 1;
+  let useChickSprite = state.level >= 1 && name !== 'slime';
+  let extraTopAnnotation = null;
+
+  if (state.ceremony === 'shake') {
+    const [sx, sy] = shakeOffset(elapsed, 3, 1500);
+    extraX += sx; extraY += sy;
+    if (elapsed > 1500) ceremonyOver = true;
+
+  } else if (state.ceremony === 'crack') {
+    const [sx, sy] = shakeOffset(elapsed, 2, 1200);
+    extraX += sx; extraY += sy;
+    if (elapsed > 1500) ceremonyOver = true;
+
+  } else if (state.ceremony === 'hatch') {
+    // Phase 1: shake building (0-1000ms)
+    if (elapsed < 1000) {
+      const intensity = 1 + (elapsed / 1000) * 3;
+      const [sx, sy] = shakeOffset(elapsed, intensity, 2000);
+      extraX += sx; extraY += sy;
+    }
+    // Phase 2: crack visible 600-1600ms
+    // (drawn below via fxCracks)
+    // Phase 3: burst at 1600ms
+    if (elapsed >= 1600 && elapsed < 1700) {
+      if (!state._burstFired) {
+        state._burstFired = true;
+        const burstColors = name === 'mist'
+          ? ['#ecf3f9','#b8d2ec','#7eb0e8','#5a7caf']
+          : name === 'ember'
+          ? ['#ff7028','#ffc850','#ff9050','#7a1a08']
+          : ['#9778dc','#3a3050','#1a1525','#c8a8ff'];
+        makeParticles('burst-' + name, 22, center.cx, center.cy, {
+          speedMin: 80, speedRange: 100, life: 1.2,
+          gravity: 200, size: 3, colors: burstColors, shape: 'square'
+        });
+      }
+    }
+    // Phase 4: egg fades out + chick fades in 1600-2400ms
+    if (elapsed >= 1600 && elapsed < 2400) {
+      spriteAlpha = Math.max(0, 1 - (elapsed - 1600) / 400);
+      useChickSprite = false; // still showing egg fading
+    } else if (elapsed >= 2000) {
+      useChickSprite = true;
+      spriteAlpha = Math.min(1, (elapsed - 2000) / 500);
+      state.level = 1;
+    }
+    if (elapsed > 3500) {
+      ceremonyOver = true;
+      delete state._burstFired;
+      particleSystems.delete('burst-' + name);
+    }
+
+  } else if (state.ceremony === 'levelup') {
+    if (elapsed >= 200 && elapsed < 300 && !state._sparkleFired) {
+      state._sparkleFired = true;
+    }
+    if (elapsed > 2500) {
+      ceremonyOver = true;
+      delete state._sparkleFired;
+      particleSystems.delete('sparkle-' + name);
+    }
+
+  } else if (state.ceremony === 'eat') {
+    if (elapsed > 900) { ceremonyOver = true; state.mood = 'idle'; }
+
+  } else if (state.ceremony === 'damage') {
+    // shake + red tint
+    const [sx, sy] = shakeOffset(elapsed, 4, 600);
+    extraX += sx; extraY += sy;
+    if (elapsed > 1200) { ceremonyOver = true; state.mood = 'idle'; }
+
+  } else if (state.ceremony === 'satisfied') {
+    if (elapsed >= 100 && !state._sparkleFired) {
+      state._sparkleFired = true;
+      makeParticles('sparkle-' + name, 10, center.cx, center.cy - 10, {
+        speedMin: 15, speedRange: 25, upBias: 30, life: 1.2,
+        gravity: -15, size: 2, colors: ['#fde047','#ffffff'], shape: 'square'
+      });
+    }
+    if (elapsed > 1500) {
+      ceremonyOver = true; state.mood = 'idle';
+      delete state._sparkleFired;
+      particleSystems.delete('sparkle-' + name);
+    }
+  }
+
+  // Draw sprite
+  ctx.save();
+  ctx.translate(origin.x + extraX, origin.y + bobY + extraY);
+  if (name === 'slime') {
+    let tintColor = null, tintAlpha = 0;
+    if (state.ceremony === 'damage' && elapsed < 600) {
+      tintColor = '#ff4040';
+      tintAlpha = 0.7 * (1 - elapsed / 600);
+    }
+    drawSlime(ctx, 0, 0, SCALE, state.mood, tintColor, tintAlpha);
+  } else {
+    const def = useChickSprite ? chickDefs[name] : eggDefs[name];
+    drawSprite(ctx, def, 0, 0, SCALE, spriteAlpha);
+  }
+  ctx.restore();
+
+  // Ceremony overlays (drawn ABOVE sprite, in canvas coords)
+  if (state.ceremony === 'crack' || (state.ceremony === 'hatch' && elapsed >= 600 && elapsed < 1700)) {
+    const crackT = state.ceremony === 'crack' ? elapsed : (elapsed - 600);
+    fxCracks(ctx, crackT, center.cx, center.cy + 4, SCALE);
+  }
+
+  if (state.ceremony === 'hatch' && elapsed >= 1600) {
+    drawParticles(ctx, 'burst-' + name, 1/60);
+  }
+
+  if (state.ceremony === 'levelup') {
+    // Color theme per species (slime → green)
+    const flashColor = name === 'mist' ? '#b8d2ec'
+                    : name === 'ember' ? '#ffc850'
+                    : name === 'onyx' ? '#9778dc'
+                    : '#a7f3d0';
+    fxRadialFlash(ctx, elapsed, center.cx, center.cy, {
+      duration_ms: 500, maxR: 80, alpha: 0.85, color: flashColor
+    });
+    fxRing(ctx, elapsed - 100, center.cx, center.cy, {
+      duration_ms: 900, maxR: 80, color: flashColor
+    });
+    if (elapsed >= 300 && !state._lvUpSparkle) {
+      state._lvUpSparkle = true;
+      const cols = name === 'mist' ? ['#b8d2ec','#ecf3f9','#fde047']
+                : name === 'ember' ? ['#ffc850','#ff9050','#fde047']
+                : name === 'onyx' ? ['#9778dc','#c8a8ff','#fde047']
+                : ['#a7f3d0','#fde047','#ffffff'];
+      makeParticles('lvup-' + name, 16, center.cx, center.cy, {
+        speedMin: 60, speedRange: 50, life: 1.6, upBias: 30,
+        gravity: -30, size: 3, colors: cols, shape: 'square'
+      });
+    }
+    drawParticles(ctx, 'lvup-' + name, 1/60);
+    if (elapsed > 2500) {
+      delete state._lvUpSparkle;
+      particleSystems.delete('lvup-' + name);
+    }
+  }
+
+  if (state.ceremony === 'satisfied') {
+    drawParticles(ctx, 'sparkle-' + name, 1/60);
+  }
+
+  if (ceremonyOver) state.ceremony = null;
+
+  // Update stage label
+  if (name !== 'slime') {
+    const lbl = document.getElementById('lbl-' + name);
+    if (lbl) lbl.textContent = stageLabels[name][state.level] || stageLabels[name][0];
+  }
+}
+
+//══════════════════════════════════════════════════════════════════════
+// Cinema (Full Hatch Ceremony — orchestrated).
+//══════════════════════════════════════════════════════════════════════
+
+const cinema = {
+  playing: false,
+  t0: 0,
+  pet: 'ember', // featured species
+  level: 0,
+  step: 'Idle',
+  narrate: '',
+};
+
+const CINEMA_TIMELINE = [
+  { at: 0,    step: 'Idle',          narrate: 'Egg breathing peacefully...' },
+  { at: 1000, step: 'Stirring',      narrate: 'Something is happening inside...' },
+  { at: 2000, step: 'Shake',         narrate: 'The egg starts to wobble!' },
+  { at: 3000, step: 'Crack',         narrate: 'Cracks appear on the shell.' },
+  { at: 4200, step: 'BURST',         narrate: '✨ The shell shatters!' },
+  { at: 5000, step: 'Reveal',        narrate: 'Your Flicker emerges!' },
+  { at: 6000, step: 'Level Up',      narrate: '🎉 Lv 1 — Flicker · Last chance to name!' },
+  { at: 8500, step: 'Celebrating',   narrate: 'A new companion is born.' },
+  { at: 10500,step: 'Settled',       narrate: 'Press Reset to replay.' },
+];
+
+function playFullHatch() {
+  cinema.playing = true;
+  cinema.t0 = performance.now();
+  cinema.level = 0;
+  cinema._burstFired = false;
+  cinema._lvupFired = false;
+  particleSystems.delete('cinema-burst');
+  particleSystems.delete('cinema-lvup');
+  particleSystems.delete('cinema-confetti');
+}
+
+function resetCinema() {
+  cinema.playing = false;
+  cinema.level = 0;
+  cinema.step = 'Idle';
+  cinema.narrate = 'Press ▶ to watch a full L0 → L1 hatch from idle to chick reveal.';
+  document.getElementById('cinema-step').textContent = cinema.step;
+  document.getElementById('cinema-narrate').textContent = cinema.narrate;
+  document.getElementById('cinema-timeline').style.width = '0%';
+  particleSystems.delete('cinema-burst');
+  particleSystems.delete('cinema-lvup');
+  particleSystems.delete('cinema-confetti');
+}
+
+function renderCinema(now) {
+  const canvas = document.getElementById('c-cinema');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  const center = centerOf(canvas);
+  const cinScale = 8; // 16*8 = 128 sprite
+  const cinOrigin = {
+    x: (canvas.width - 16 * cinScale) / 2,
+    y: (canvas.height - 16 * cinScale) / 2,
+  };
+
+  const bobY = Math.sin(now / 600) * 2;
+
+  if (!cinema.playing) {
+    // Idle render
+    drawSprite(ctx, EMBER, cinOrigin.x, cinOrigin.y + bobY, cinScale);
+    return;
+  }
+
+  const t = now - cinema.t0;
+  const total = 11000;
+  document.getElementById('cinema-timeline').style.width = Math.min(100, (t / total) * 100) + '%';
+
+  // Update step + narrate
+  let currentStep = CINEMA_TIMELINE[0];
+  for (const s of CINEMA_TIMELINE) {
+    if (t >= s.at) currentStep = s;
+  }
+  if (currentStep.step !== cinema.step) {
+    cinema.step = currentStep.step;
+    cinema.narrate = currentStep.narrate;
+    document.getElementById('cinema-step').textContent = cinema.step;
+    document.getElementById('cinema-narrate').textContent = cinema.narrate;
+  }
+
+  let extraX = 0, extraY = 0;
+  let spriteAlpha = 1;
+  let useChick = false;
+
+  // Phase logic
+  if (t < 1000) {
+    // pure idle
+  } else if (t < 2000) {
+    // gentle stir
+    extraX += (Math.random() - 0.5) * 1.5;
+    extraY += (Math.random() - 0.5) * 1;
+  } else if (t < 3000) {
+    // ramp shake
+    const p = (t - 2000) / 1000;
+    extraX += (Math.random() - 0.5) * (3 + p * 4);
+    extraY += (Math.random() - 0.5) * (2 + p * 3);
+  } else if (t < 4200) {
+    // hard shake + cracks
+    extraX += (Math.random() - 0.5) * 6;
+    extraY += (Math.random() - 0.5) * 5;
+  } else if (t < 5000) {
+    // BURST
+    if (!cinema._burstFired) {
+      cinema._burstFired = true;
+      makeParticles('cinema-burst', 30, center.cx, center.cy, {
+        speedMin: 100, speedRange: 120, life: 1.2,
+        gravity: 250, size: 4, colors: ['#ff7028','#ffc850','#ff9050','#7a1a08','#fff8c8'],
+        shape: 'square'
+      });
+    }
+    // Egg fades out
+    spriteAlpha = Math.max(0, 1 - (t - 4200) / 400);
+  } else if (t < 8500) {
+    // Reveal + level up
+    useChick = true;
+    spriteAlpha = Math.min(1, (t - 5000) / 600);
+    if (t > 6000 && !cinema._lvupFired) {
+      cinema._lvupFired = true;
+      makeParticles('cinema-lvup', 20, center.cx, center.cy, {
+        speedMin: 80, speedRange: 70, life: 2.0, upBias: 60,
+        gravity: -30, size: 4, colors: ['#ffc850','#fde047','#ffffff','#ff9050'],
+        shape: 'square'
+      });
+      makeParticles('cinema-confetti', 40, center.cx, center.cy - 80, {
+        speedMin: 0, speedRange: 80, life: 3.0,
+        gravity: 400, size: 4,
+        colors: ['#ff7028','#ffc850','#a78bfa','#6ee7b7','#fde047','#7eb0e8'],
+        shape: 'square'
+      });
+    }
+  } else {
+    useChick = true;
+  }
+
+  // Draw sprite
+  ctx.save();
+  ctx.translate(cinOrigin.x + extraX, cinOrigin.y + bobY + extraY);
+  if (useChick) {
+    drawSprite(ctx, EMBER_FLICKER, 0, 0, cinScale, spriteAlpha);
+  } else {
+    drawSprite(ctx, EMBER, 0, 0, cinScale, spriteAlpha);
+  }
+  ctx.restore();
+
+  // Cracks overlay (phase 3-4)
+  if (t >= 3000 && t < 4500) {
+    fxCracks(ctx, t - 3000, center.cx, center.cy + 16, cinScale);
+  }
+
+  // Burst particles (phase 4)
+  if (t >= 4200) {
+    drawParticles(ctx, 'cinema-burst', 1/60);
+  }
+
+  // Level up flash (phase 5)
+  if (t >= 6000 && t < 6700) {
+    fxRadialFlash(ctx, t - 6000, center.cx, center.cy, {
+      duration_ms: 700, maxR: 160, alpha: 0.9, color: '#fff8c8'
+    });
+  }
+  if (t >= 6000 && t < 7200) {
+    fxRing(ctx, t - 6000, center.cx, center.cy, {
+      duration_ms: 1200, maxR: 140, color: '#ffc850'
+    });
+  }
+  if (t >= 6000) drawParticles(ctx, 'cinema-lvup', 1/60);
+  if (t >= 6500) drawParticles(ctx, 'cinema-confetti', 1/60);
+
+  if (t > total) {
+    cinema.playing = false;
+  }
+}
+
+//══════════════════════════════════════════════════════════════════════
+// Effect parade (continuous loops of each effect on its own canvas).
+//══════════════════════════════════════════════════════════════════════
+
+const paradeStates = {};
+
+function renderParade(now) {
+  // Each effect is on a 6s loop
+  const loop = 2500;
+
+  function ensureParticles(id, fn) {
+    const phase = now % loop;
+    if (phase < 32 && !paradeStates[id]?.fired) {
+      paradeStates[id] = { fired: true };
+      fn();
+    }
+    if (phase > loop - 100) paradeStates[id] = { fired: false };
+  }
+
+  // Flash
+  {
+    const canvas = document.getElementById('fx-flash');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    const t = now % loop;
+    if (t < 800) fxRadialFlash(ctx, t, cx, cy, { duration_ms: 800, maxR: 80, alpha: 0.95, color: '#ffe080' });
+  }
+
+  // Ring
+  {
+    const canvas = document.getElementById('fx-ring');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    const t = now % loop;
+    if (t < 1200) fxRing(ctx, t, cx, cy, { duration_ms: 1200, maxR: 80, color: '#c4b1ff' });
+  }
+
+  // Particle burst
+  {
+    const canvas = document.getElementById('fx-particles');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    ensureParticles('fx-particles', () => {
+      makeParticles('fx-particles', 18, cx, cy, {
+        speedMin: 60, speedRange: 80, life: 1.5, gravity: 80, size: 3,
+        colors: ['#ff7028','#ffc850','#a78bfa','#6ee7b7','#fde047'], shape: 'square'
+      });
+    });
+    drawParticles(ctx, 'fx-particles', 1/60);
+  }
+
+  // Sparkles
+  {
+    const canvas = document.getElementById('fx-sparkles');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    ensureParticles('fx-sparkles', () => {
+      makeParticles('fx-sparkles', 12, cx, cy + 20, {
+        speedMin: 10, speedRange: 25, life: 2.0, upBias: 50,
+        gravity: -15, size: 2, colors: ['#fde047','#ffffff','#c4b1ff'], shape: 'square'
+      });
+    });
+    fxSparkles(ctx, now % loop, 'fx-sparkles-twinkle', cx, cy);
+  }
+
+  // Confetti
+  {
+    const canvas = document.getElementById('fx-confetti');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    ensureParticles('fx-confetti', () => {
+      makeParticles('fx-confetti', 24, cx, cy - 40, {
+        speedMin: 0, speedRange: 60, life: 2.5, gravity: 350, size: 3,
+        colors: ['#ff7028','#ffc850','#a78bfa','#6ee7b7','#fde047','#7eb0e8'],
+        shape: 'square'
+      });
+    });
+    drawParticles(ctx, 'fx-confetti', 1/60);
+  }
+
+  // Bubble
+  {
+    const canvas = document.getElementById('fx-bubble');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const cx = canvas.width / 2, cy = canvas.height / 2;
+    const t = now % loop;
+    // Animate a speech bubble appearing
+    const p = Math.min(1, t / 400);
+    const fadeOut = t > 1800 ? Math.max(0, 1 - (t - 1800) / 700) : 1;
+    const w = 80 * p;
+    const h = 40 * p;
+    const x = cx - w / 2;
+    const y = cy - h / 2 - 10;
+    ctx.globalAlpha = fadeOut * 0.95;
+    // bubble bg
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), Math.floor(h));
+    ctx.fillStyle = '#000';
+    ctx.fillRect(Math.floor(x), Math.floor(y), Math.floor(w), 2);
+    ctx.fillRect(Math.floor(x), Math.floor(y + h - 2), Math.floor(w), 2);
+    ctx.fillRect(Math.floor(x), Math.floor(y), 2, Math.floor(h));
+    ctx.fillRect(Math.floor(x + w - 2), Math.floor(y), 2, Math.floor(h));
+    // tail
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(Math.floor(cx - 2), Math.floor(y + h), 4, 4);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(Math.floor(cx - 3), Math.floor(y + h), 1, 5);
+    ctx.fillRect(Math.floor(cx + 2), Math.floor(y + h), 1, 5);
+    // text dots (placeholder for actual text)
+    if (p > 0.7) {
+      ctx.fillStyle = '#000';
+      const dots = 'hi !';
+      for (let i = 0; i < dots.length; i++) {
+        const ch = dots[i];
+        if (ch === ' ') continue;
+        ctx.fillRect(Math.floor(x + 10 + i * 14), Math.floor(y + h / 2 - 4), 8, 8);
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+//══════════════════════════════════════════════════════════════════════
+// Master animation loop.
+//══════════════════════════════════════════════════════════════════════
+
+function loop() {
+  const now = performance.now();
+  for (const name of cells) renderCell(name, now);
+  renderCinema(now);
+  renderParade(now);
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+{
+  "$schema": "petpet-template/v1",
+  "meta": {
+    "id": "unicorn",
+    "name": "Unicorn",
+    "version": "1.0.0",
+    "author": "petpet-builtin",
+    "license": "MIT",
+    "description": "A sparkly pink unicorn companion — Easy difficulty. Hatches from a crystal egg and grows into a winged alicorn on a rainbow cloud, then ascends in gold."
+  },
+  "species": {
+    "name": "Unicorn",
+    "description": "A magical unicorn that grows wings, a rainbow mane, and finally golden splendour. Thrives on gentle daily conversation; reaches its final form in about a month of regular use.",
+    "default_pet_name": "Sparkle",
+    "flavor": "Born from a glittering crystal egg."
+  },
+  "labels": [
+    { "text": "Easy", "color": "#b8e6b8", "fg": "#1a1a1a" },
+    { "text": "Cute", "color": "#ffb8d8", "fg": "#1a1a1a" }
+  ],
+  "theme": {
+    "primary":   "#ff8fb1",
+    "secondary": "#c8a8ff",
+    "accent":    "#fff0f8",
+    "palette":   ["#ff8fb1", "#ffc850", "#c8a8ff", "#fde047", "#fff0f8", "#a78bfa"]
+  },
+  "assets": {
+    "sheet":  "sheet.png",
+    "frames": "sheet.json",
+    "thumb":  "thumb.png"
+  }
+}

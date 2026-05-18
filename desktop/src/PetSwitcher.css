@@ -1,0 +1,252 @@
+/* PetSwitcher — Pokémon-party-style picker for switching the active
+ * companion. Reuses .gba-box, .gba-button, .picker-error from App.css. */
+
+.switcher-overlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  z-index: 1000;
+  padding: 6px 6px 12px 6px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  color: #1a1a1a;
+}
+
+.switcher-box {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+.switcher-empty {
+  text-align: center;
+  padding: 32px 12px;
+  color: #888;
+  font-size: 12px;
+  line-height: 1.8;
+}
+/* Empty-state "tap + in the top-right" hint. Big arrow glyph
+   anchored near the top edge of the empty area so the eye is drawn
+   up-and-right toward the actual action button in the title row. */
+.switcher-empty-glyph {
+  font-size: 32px;
+  line-height: 1;
+  color: #c8c8c8;
+  text-align: right;
+  padding-right: 12px;
+  margin-bottom: 12px;
+  animation: switcher-empty-bounce 2.2s ease-in-out infinite;
+}
+.switcher-empty-text {
+  font-size: 11px;
+  line-height: 1.7;
+  color: #555;
+  letter-spacing: 0.02em;
+}
+.switcher-empty-text b {
+  color: #1a1a1a;
+  font-weight: normal;
+  padding: 0 2px;
+}
+@keyframes switcher-empty-bounce {
+  0%, 100% { transform: translateY(0); opacity: 0.55; }
+  50%      { transform: translateY(-4px); opacity: 1; }
+}
+
+/* Card grid — two columns on the typical 720px-wide picker window. */
+.switcher-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  border: 3px solid #1a1a1a;
+  background: #f0f0f0;
+  padding: 8px;
+  border-radius: 6px;
+  /* Grow to absorb available height — keeps layout balanced. */
+  flex: 1 1 0;
+  min-height: 220px;
+  overflow-y: auto;
+  align-content: start;
+  /* Pixel-style chunky scrollbar (matches egg-list). */
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.switcher-grid::-webkit-scrollbar { width: 14px; }
+.switcher-grid::-webkit-scrollbar-track {
+  background: #ddd;
+  border-left: 3px solid #1a1a1a;
+}
+.switcher-grid::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 3px solid #1a1a1a;
+  border-radius: 0;
+  min-height: 40px;
+}
+
+.switcher-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 8px 12px;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: center;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+  /* Embossed look matching .gba-button. */
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #d8d8d8,
+    0 3px 0 #1a1a1a;
+}
+.switcher-card:hover {
+  background: #fffceb;
+}
+.switcher-card:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #d8d8d8,
+    0 0 0 #1a1a1a;
+}
+.switcher-card.selected {
+  background: #f8d850;
+  box-shadow:
+    inset 0 0 0 2px #ffec88,
+    inset 0 0 0 5px #c8a020,
+    0 3px 0 #1a1a1a;
+}
+.switcher-card.active {
+  outline: 2px solid #3070d8;
+  outline-offset: 2px;
+}
+
+/* "+ Hatch new" tile — same card shell as a pet, but distinguished by
+ * a dashed border and dimmer palette so it reads as an action, not a
+ * companion. */
+.switcher-card-add {
+  background: #fafafa;
+  border-style: dashed;
+  color: #888;
+}
+.switcher-card-add:hover {
+  background: #fff8c8;
+  color: #1a1a1a;
+}
+.switcher-add-glyph {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  color: #aaa;
+}
+.switcher-card-add:hover .switcher-add-glyph {
+  color: #1a1a1a;
+}
+
+.switcher-card-sprite {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.switcher-card-img {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  -webkit-user-drag: none;
+}
+.switcher-card-svg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.switcher-card-svg > .pet {
+  /* override the global .pet sizing (128px) — fit inside the card's
+   * 64px sprite slot instead. */
+  width: 64px !important;
+  height: 64px !important;
+  animation: none !important;
+}
+.switcher-card-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  color: #3070d8;
+  font-size: 12px;
+  text-shadow: 0 0 4px #fff, 0 0 2px #fff;
+}
+
+.switcher-card-name {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.switcher-card-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.04em;
+}
+.switcher-card-lvl {
+  color: #b8860b;
+  font-variant-numeric: tabular-nums;
+}
+.switcher-card-stage {
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Bottom info strip — mirrors Pokémon's "your party member's details"
+ * panel that appears below the grid. */
+.switcher-detail {
+  border: 3px solid #1a1a1a;
+  background: #ffffff;
+  padding: 10px 14px;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 11px;
+  color: #1a1a1a;
+}
+.switcher-detail-name {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.switcher-detail-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  color: #555;
+  font-variant-numeric: tabular-nums;
+}

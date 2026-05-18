@@ -1,0 +1,27 @@
+{
+  "$schema": "petpet-preset/stages-v1",
+  "id": "simple",
+  "name": "Simple (3 stages)",
+  "tagline": "Few stages",
+  "description": "Three evolution moments — minimal sprite work and a simple arc. Pick this when you only want to draw a handful of forms.",
+  "stages": [
+    {
+      "id": "stage_0",
+      "name": "Stage 0",
+      "flavor": "Starting form.",
+      "trigger": { "metric": "level", "value": 0 }
+    },
+    {
+      "id": "stage_1",
+      "name": "Stage 1",
+      "flavor": "Mid form.",
+      "trigger": { "metric": "level", "value": 5 }
+    },
+    {
+      "id": "stage_2",
+      "name": "Stage 2",
+      "flavor": "Final form.",
+      "trigger": { "metric": "level", "value": 30 }
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "stage_3",
+  "name": "Stage 3",
+  "flavor": "Showing personality.",
+  "trigger": {
+    "metric": "level",
+    "value": 15
+  },
+  "attributes": {}
+}

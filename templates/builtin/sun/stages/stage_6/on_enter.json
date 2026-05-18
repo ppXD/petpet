@@ -1,0 +1,27 @@
+[
+  {
+    "kind": "flash",
+    "color": "#f5e8a8",
+    "for": "0.5s"
+  },
+  {
+    "kind": "ring",
+    "color": "#f5c024",
+    "for": "1s"
+  },
+  {
+    "kind": "sparkle",
+    "after": "0.3s",
+    "colors": [
+      "#f5c024",
+      "#f5a020",
+      "#fde047"
+    ]
+  },
+  {
+    "kind": "bubble",
+    "after": "0.5s",
+    "text": "{{pet.name}} reached {{stage.name}}!",
+    "for": "2.5s"
+  }
+]

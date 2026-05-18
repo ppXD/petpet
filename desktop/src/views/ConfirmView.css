@@ -1,0 +1,80 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+html, body, #root {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+.confirm-root {
+  /* Sized by ResizeObserver — let content drive width / height. */
+  display: inline-block;
+  margin: 6px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  color: #1a1a1a;
+}
+
+.confirm-box {
+  width: max-content;
+  /* Soft cap so an unusually long body string wraps to multiple lines
+   * rather than running off-screen. */
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  animation: confirm-pop 0.18s ease-out;
+}
+
+@keyframes confirm-pop {
+  0%   { opacity: 0; transform: scale(0.92); }
+  60%  { opacity: 1; transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.confirm-title {
+  /* Override .gba-title's `cursor: grab` — there's nothing to drag. */
+  cursor: default;
+  font-size: 13px;
+  padding: 4px 0 10px;
+}
+
+.confirm-body {
+  padding: 10px 14px;
+  font-size: 11px;
+}
+.confirm-body p {
+  margin: 0 0 5px 0;
+  line-height: 1.7;
+  color: #1a1a1a;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.confirm-body p:last-child {
+  margin-bottom: 0;
+}
+.confirm-spacer {
+  height: 4px;
+}
+
+/* Action row — always one line, no wrap. Buttons share equal width
+ * up to a sensible max so 2 or 3 buttons all fit comfortably in the
+ * dialog width without dropping to a second row. */
+.confirm-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 10px;
+  margin-top: 2px;
+}
+.confirm-actions .gba-button {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 200px;
+  font-size: 11px;
+  padding: 10px 12px;
+  white-space: nowrap;
+}

@@ -1,0 +1,512 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <title>Mist · Cloud Dratini line — pixel-art draft</title>
+  <style>
+    :root { color-scheme: dark; font-family: -apple-system, "SF Pro Text", system-ui, sans-serif; }
+    body {
+      margin: 0; min-height: 100vh;
+      background: radial-gradient(circle at 30% 20%, #2a3550 0%, #14192a 60%, #0a0d18 100%);
+      color: #ecf3f9; padding: 40px 24px 80px; box-sizing: border-box;
+    }
+    h1 { font-weight: 600; font-size: 22px; margin: 0 0 6px; letter-spacing: 0.5px; }
+    .sub { color: #8d9cb8; font-size: 13px; margin-bottom: 24px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 20px; max-width: 1200px; margin: 0 auto;
+    }
+    .card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 12px;
+      padding: 22px 18px 18px;
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+    .stage-label { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: #7eb0e8; font-weight: 600; }
+    .stage-name { font-size: 15px; font-weight: 600; color: #ecf3f9; }
+    .silhouette-tag {
+      font-size: 10px; color: #f5a8c0;
+      background: rgba(245,168,192,0.1);
+      padding: 2px 8px; border-radius: 10px; letter-spacing: 0.5px;
+    }
+    .pokeref {
+      font-size: 9.5px; color: #6b7a96; font-family: ui-monospace, "SF Mono", monospace;
+      margin-top: -2px;
+    }
+    .flavor {
+      font-size: 11.5px; color: #8d9cb8;
+      text-align: center; line-height: 1.5;
+      min-height: 32px; max-width: 220px; margin-top: 4px;
+    }
+    .sprite-large {
+      width: 200px; height: 200px;
+      display: flex; align-items: center; justify-content: center;
+      filter: drop-shadow(0 4px 12px rgba(126,176,232,0.18));
+    }
+    .sprite-large > svg {
+      width: 100%; height: 100%;
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+    }
+    .sprite-row {
+      display: flex; align-items: flex-end; gap: 14px;
+      margin-top: 4px; padding: 8px 0 0;
+      border-top: 1px dashed rgba(255,255,255,0.08);
+      width: 100%; justify-content: center;
+    }
+    .sprite-row .sm, .sprite-row .md {
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sprite-row .sm { width: 36px; height: 36px; }
+    .sprite-row .md { width: 72px; height: 72px; }
+    .sprite-row svg { width: 100%; height: 100%; image-rendering: pixelated; image-rendering: crisp-edges; }
+    .effects {
+      font-size: 10.5px; color: #6b7a96;
+      font-family: ui-monospace, "SF Mono", monospace;
+      text-align: center; line-height: 1.6;
+    }
+
+    /* ───────────────────────────── animations ───────────────────────────── */
+    .mist-sprite-wrap { animation: bob 2.6s ease-in-out infinite; }
+    @keyframes bob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+    /* Pixel-style eye blink: hide whole eye row briefly */
+    .eye-row { animation: blink 4.4s ease-in-out infinite; transform-origin: center; transform-box: fill-box; }
+    @keyframes blink {
+      0%,92%,100% { opacity: 1; }
+      94%,96%     { opacity: 0; }
+    }
+
+    /* glow pulse for egg */
+    .glow-ring {
+      animation: glow-pulse 3s ease-in-out infinite;
+      transform-box: fill-box; transform-origin: center;
+    }
+    @keyframes glow-pulse {
+      0%,100% { opacity: 0.55; transform: scale(1); }
+      50%     { opacity: 0.95; transform: scale(1.1); }
+    }
+
+    .orb {
+      animation: orb-float 2.4s ease-in-out infinite;
+      transform-box: fill-box; transform-origin: center;
+    }
+    .orb.delay { animation-delay: 1.2s; }
+    @keyframes orb-float {
+      0%,100% { transform: translateY(0); }
+      50%     { transform: translateY(-2px); }
+    }
+
+    .halo {
+      animation: halo-shimmer 2s ease-in-out infinite;
+      transform-box: fill-box; transform-origin: center;
+    }
+    @keyframes halo-shimmer {
+      0%,100% { opacity: 0.7; }
+      50%     { opacity: 1; }
+    }
+
+    .gem-pulse {
+      animation: gem-pulse 2.2s ease-in-out infinite;
+      transform-box: fill-box; transform-origin: center;
+    }
+    @keyframes gem-pulse {
+      0%,100% { opacity: 0.9; }
+      50%     { opacity: 1; filter: drop-shadow(0 0 1px #a78bfa); }
+    }
+
+    .header-block { max-width: 1200px; margin: 0 auto 28px; }
+    .palette { display: flex; gap: 8px; margin-top: 8px; align-items: center; font-size: 11px; color: #6b7a96; }
+    .swatch { width: 18px; height: 18px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+    .arc-banner {
+      max-width: 1200px; margin: 24px auto;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; font-size: 11px; color: #7eb0e8;
+      background: rgba(126,176,232,0.06);
+      border: 1px solid rgba(126,176,232,0.18);
+      padding: 12px 18px; border-radius: 10px;
+    }
+    .arc-banner b { color: #ecf3f9; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="header-block">
+    <h1>Mist · Cloud Dratini line — pixel-art draft (stages 0 / 1 / 5 / 9)</h1>
+    <p class="sub">Pokemon-style pixel sprites · <b>SVG rect-grid</b> with crispEdges + pixelated rendering. Each sprite is built procedurally so palette/scale are tunable.</p>
+    <div class="palette">
+      <span>Palette:</span>
+      <span class="swatch" style="background:#1a2b40" title="outline"></span>
+      <span class="swatch" style="background:#5a7caf"></span>
+      <span class="swatch" style="background:#7eb0e8"></span>
+      <span class="swatch" style="background:#b8d2ec"></span>
+      <span class="swatch" style="background:#ecf3f9"></span>
+      <span class="swatch" style="background:#ffffff"></span>
+      <span class="swatch" style="background:#fde047"></span>
+      <span class="swatch" style="background:#a78bfa"></span>
+      <span class="swatch" style="background:#f5a8c0"></span>
+    </div>
+  </div>
+
+  <div class="arc-banner">
+    <span>EVOLUTION ARC</span>
+    <span>🥚 egg &nbsp;→&nbsp; <b>Mistini</b> (Dratini-form · stage 1) &nbsp;→&nbsp; <b>Mistair</b> (Dragonair-form · stage 5) &nbsp;→&nbsp; <b>Cumulonite</b> (Dragonite-form · stage 9)</span>
+    <span>3 base forms · 9 levels of growth</span>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <span class="stage-label">stage_0 · level 0</span>
+      <span class="stage-name">Cloud Egg</span>
+      <span class="silhouette-tag">○ egg</span>
+      <span class="pokeref">// pixel grid: 32 × 32</span>
+      <div class="sprite-large mist-sprite-wrap" data-stage="0"></div>
+      <p class="flavor">Speckled cloud-egg. Something coils inside, waiting.</p>
+      <div class="sprite-row">
+        <div class="sm" data-stage="0"></div>
+        <div class="md" data-stage="0"></div>
+      </div>
+      <p class="effects">bob · glow-pulse</p>
+    </div>
+
+    <div class="card">
+      <span class="stage-label">stage_1 · level 1</span>
+      <span class="stage-name">Mistini</span>
+      <span class="silhouette-tag">∽ tiny serpent</span>
+      <span class="pokeref">// ref: Dratini · grid 40 × 40</span>
+      <div class="sprite-large mist-sprite-wrap" data-stage="1"></div>
+      <p class="flavor">A tiny cloud-serpent, curled and shy. Round head, two white ear-fins, single antenna nub.</p>
+      <div class="sprite-row">
+        <div class="sm" data-stage="1"></div>
+        <div class="md" data-stage="1"></div>
+      </div>
+      <p class="effects">bob · blink</p>
+    </div>
+
+    <div class="card">
+      <span class="stage-label">stage_5 · level ~44</span>
+      <span class="stage-name">Mistair</span>
+      <span class="silhouette-tag">⟿ floating serpent + orbs</span>
+      <span class="pokeref">// ref: Dragonair · grid 48 × 48</span>
+      <div class="sprite-large mist-sprite-wrap" data-stage="5"></div>
+      <p class="flavor">Stretched into a graceful floating serpent. Two golden orbs hover at neck and tail, a small horn rises above.</p>
+      <div class="sprite-row">
+        <div class="sm" data-stage="5"></div>
+        <div class="md" data-stage="5"></div>
+      </div>
+      <p class="effects">bob · blink · orb-float</p>
+    </div>
+
+    <div class="card">
+      <span class="stage-label">stage_9 · level 99</span>
+      <span class="stage-name">Cumulonite</span>
+      <span class="silhouette-tag">◐ bipedal cloud dragon</span>
+      <span class="pokeref">// ref: Dragonite · grid 56 × 56</span>
+      <div class="sprite-large mist-sprite-wrap" data-stage="9"></div>
+      <p class="flavor">A round-bellied cloud guardian on two feet. Small wings, antennae, halo of gold, a violet jewel on the brow.</p>
+      <div class="sprite-row">
+        <div class="sm" data-stage="9"></div>
+        <div class="md" data-stage="9"></div>
+      </div>
+      <p class="effects">bob · halo-shimmer · gem-pulse</p>
+    </div>
+  </div>
+
+  <p class="sub" style="text-align:center;margin-top:48px;max-width:760px;margin-left:auto;margin-right:auto;line-height:1.6;">
+    <b>Pokemon-arc lineage:</b> Dratini (tiny aquatic serpent) → Dragonair (elegant floating mystical serpent with neck/tail orbs) → Dragonite (kindhearted bipedal dragon that guides lost ships). Same evolution beats applied to Mist's cloud palette.
+  </p>
+
+  <script>
+    // ═══════════════════════════════════════════════════════════════════
+    // Pixel-art canvas API: build sprites by composing primitives,
+    // then render as SVG rects (crispEdges, no anti-aliasing).
+    // ═══════════════════════════════════════════════════════════════════
+
+    const palette = {
+      '.': null,            // transparent
+      'o': '#1a2b40',       // outline (dark navy)
+      'D': '#5a7caf',       // dark body shadow
+      'S': '#7eb0e8',       // sky blue mid
+      'B': '#b8d2ec',       // light blue
+      'L': '#ecf3f9',       // body base (cream-white)
+      'W': '#ffffff',       // highlight pure white
+      'g': '#fde047',       // gold (orb / halo / star)
+      'G': '#f5b800',       // gold dark
+      'p': '#a78bfa',       // purple gem
+      'P': '#7c5fd9',       // purple dark
+      'k': '#f5a8c0',       // pink blush
+      'e': '#2a3550'        // eye dark
+    };
+
+    function makeGrid(w, h) {
+      return Array.from({length:h}, () => Array(w).fill('.'));
+    }
+    function setPx(g, x, y, c) {
+      if (y < 0 || y >= g.length || x < 0 || x >= g[0].length) return;
+      g[y][x] = c;
+    }
+    function getPx(g, x, y) {
+      if (y < 0 || y >= g.length || x < 0 || x >= g[0].length) return '.';
+      return g[y][x];
+    }
+    function fillEllipse(g, cx, cy, rx, ry, c) {
+      for (let y = -ry; y <= ry; y++) {
+        for (let x = -rx; x <= rx; x++) {
+          if ((x*x)/(rx*rx) + (y*y)/(ry*ry) <= 1) setPx(g, cx+x, cy+y, c);
+        }
+      }
+    }
+    function fillCircle(g, cx, cy, r, c) { fillEllipse(g, cx, cy, r, r, c); }
+    function fillRect(g, x, y, w, h, c) {
+      for (let yy = y; yy < y+h; yy++) for (let xx = x; xx < x+w; xx++) setPx(g, xx, yy, c);
+    }
+    function addOutline(g, outline) {
+      const isBody = (c) => c && c !== '.' && c !== outline;
+      const w = g[0].length, h = g.length;
+      const toAdd = [];
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        if (g[y][x] === '.') {
+          if (isBody(getPx(g,x,y-1)) || isBody(getPx(g,x,y+1)) ||
+              isBody(getPx(g,x-1,y)) || isBody(getPx(g,x+1,y))) toAdd.push([x,y]);
+        }
+      }
+      for (const [x,y] of toAdd) g[y][x] = outline;
+    }
+    function gridToSvg(g, opts={}) {
+      const h = g.length, w = g[0].length;
+      const parts = [];
+      for (let y = 0; y < h; y++) {
+        let x = 0;
+        while (x < w) {
+          const c = g[y][x];
+          if (c === '.') { x++; continue; }
+          let len = 1;
+          while (x+len < w && g[y][x+len] === c) len++;
+          const color = palette[c] || '#ff00ff';
+          let cls = '';
+          if (opts.classMap && opts.classMap(c, x, y)) cls = ` class="${opts.classMap(c, x, y)}"`;
+          parts.push(`<rect x="${x}" y="${y}" width="${len}" height="1" fill="${color}"${cls}/>`);
+          x += len;
+        }
+      }
+      return `<svg viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges">${parts.join('')}</svg>`;
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // Sprite builders
+    // ═══════════════════════════════════════════════════════════════════
+
+    function buildEgg() {
+      const g = makeGrid(32, 32);
+      // glow ring (drawn first, behind body) - faint outer halo
+      // We'll mark these specially so CSS can pulse them
+      // Skip explicit ring in pixel mode; rely on bob + glow filter at SVG level
+      // Body main fill
+      fillEllipse(g, 16, 17, 10, 13, 'S');
+      // Inner cream (slightly smaller)
+      fillEllipse(g, 16, 17, 8, 11, 'L');
+      // Cloud speckles (B-color spots)
+      fillCircle(g, 11, 13, 2, 'B');
+      fillCircle(g, 22, 14, 2, 'B');
+      fillCircle(g, 12, 22, 2, 'B');
+      fillCircle(g, 21, 21, 2, 'B');
+      // Top highlight (white glint)
+      fillCircle(g, 12, 9, 2, 'W');
+      setPx(g, 11, 8, 'W');
+      // Outline pass
+      addOutline(g, 'o');
+      // Glow ring (drawn after outline so it's outside)
+      // Implemented as 4 dim corner pixels
+      const ring = [[3,4],[28,4],[3,28],[28,28],[16,2],[16,30],[2,16],[29,16]];
+      for (const [x,y] of ring) setPx(g, x, y, 'p');
+      return gridToSvg(g, {
+        classMap: (c) => c === 'p' ? 'glow-ring' : ''
+      });
+    }
+
+    function buildMistini() {
+      const g = makeGrid(40, 40);
+      // BODY: serpentine curl
+      // tail tip (bottom-left)
+      fillEllipse(g, 9, 33, 3, 2, 'L');
+      // tail mid
+      fillEllipse(g, 14, 32, 4, 3, 'L');
+      // body curve up to right
+      fillEllipse(g, 20, 30, 5, 4, 'L');
+      // belly (lower, lighter)
+      fillEllipse(g, 20, 31, 4, 2, 'W');
+      // neck up to head
+      fillEllipse(g, 24, 25, 5, 4, 'L');
+      // HEAD: round
+      fillEllipse(g, 24, 17, 8, 7, 'L');
+      // Ear-fins (Dratini signature, sticking out white)
+      fillEllipse(g, 17, 16, 2, 3, 'W');
+      fillEllipse(g, 31, 16, 2, 3, 'W');
+      // Antenna nub on top
+      fillRect(g, 24, 8, 1, 3, 'L');
+      setPx(g, 24, 7, 'W');
+      // Outline body
+      addOutline(g, 'o');
+      // Details on top (eyes, mouth, blush)
+      // Eyes (big oval)
+      fillEllipse(g, 21, 17, 1, 1, 'e');
+      fillEllipse(g, 27, 17, 1, 1, 'e');
+      // Eye sparkles
+      setPx(g, 21, 16, 'W');
+      setPx(g, 27, 16, 'W');
+      // Mouth (small smile)
+      setPx(g, 23, 20, 'e');
+      setPx(g, 24, 21, 'e');
+      setPx(g, 25, 20, 'e');
+      // Blush
+      setPx(g, 19, 20, 'k');
+      setPx(g, 29, 20, 'k');
+      return gridToSvg(g, {
+        classMap: (c, x, y) => {
+          // tag eye row so it can blink
+          if (c === 'e' && y === 17) return 'eye-row';
+          if (c === 'W' && y === 16 && (x === 21 || x === 27)) return 'eye-row';
+          return '';
+        }
+      });
+    }
+
+    function buildMistair() {
+      const g = makeGrid(48, 48);
+      // BODY: longer sinuous serpent S-curve
+      // From head (top-left area) curving down and right
+      fillEllipse(g, 18, 14, 5, 5, 'L');   // upper coil near head
+      fillEllipse(g, 22, 20, 5, 4, 'L');
+      fillEllipse(g, 24, 26, 5, 4, 'L');
+      fillEllipse(g, 22, 32, 5, 4, 'L');
+      fillEllipse(g, 26, 37, 4, 3, 'L');
+      fillEllipse(g, 31, 41, 3, 2, 'L');
+      // body lighter underside
+      fillEllipse(g, 22, 21, 4, 2, 'W');
+      fillEllipse(g, 22, 33, 4, 2, 'W');
+      // HEAD
+      fillEllipse(g, 16, 11, 6, 5, 'L');
+      // Ear-wings (small, sticking out white)
+      fillEllipse(g, 10, 10, 2, 3, 'W');
+      fillEllipse(g, 22, 10, 2, 3, 'W');
+      // Horn (Dragonair signature)
+      fillRect(g, 16, 4, 1, 3, 'B');
+      setPx(g, 16, 3, 'W');
+      // Outline now
+      addOutline(g, 'o');
+      // Floating ORBS (key Dragonair feature) - drawn after outline so they stay clean
+      // Neck orb
+      fillCircle(g, 22, 23, 2, 'g');
+      setPx(g, 22, 23, 'g');
+      setPx(g, 21, 22, 'W');
+      setPx(g, 23, 24, 'G');
+      // Tail orb
+      fillCircle(g, 30, 40, 2, 'g');
+      setPx(g, 30, 40, 'g');
+      setPx(g, 29, 39, 'W');
+      setPx(g, 31, 41, 'G');
+      // Forehead gem (foreshadow final)
+      setPx(g, 16, 9, 'p');
+      // Eyes
+      fillEllipse(g, 14, 11, 1, 1, 'e');
+      fillEllipse(g, 19, 11, 1, 1, 'e');
+      setPx(g, 14, 10, 'W');
+      setPx(g, 19, 10, 'W');
+      // Mouth
+      setPx(g, 15, 14, 'e');
+      setPx(g, 16, 15, 'e');
+      setPx(g, 17, 14, 'e');
+      // Blush
+      setPx(g, 12, 13, 'k');
+      setPx(g, 21, 13, 'k');
+      return gridToSvg(g, {
+        classMap: (c, x, y) => {
+          if (c === 'e' && y === 11) return 'eye-row';
+          if (c === 'W' && y === 10 && (x === 14 || x === 19)) return 'eye-row';
+          // Orbs get the float class
+          if ((c === 'g' || c === 'G') && y >= 22 && y <= 24) return 'orb';
+          if ((c === 'g' || c === 'G') && y >= 39 && y <= 41) return 'orb delay';
+          if (c === 'W' && ((x === 21 && y === 22) || (x === 29 && y === 39))) {
+            return y < 30 ? 'orb' : 'orb delay';
+          }
+          return '';
+        }
+      });
+    }
+
+    function buildCumulonite() {
+      const g = makeGrid(56, 56);
+      // === Body parts (drawn before outline) ===
+      // Big round belly/body
+      fillEllipse(g, 28, 37, 13, 11, 'L');
+      // Head (big, round)
+      fillEllipse(g, 28, 18, 11, 10, 'L');
+      // Arms (stubby, hanging at sides)
+      fillEllipse(g, 14, 36, 3, 5, 'L');
+      fillEllipse(g, 42, 36, 3, 5, 'L');
+      // Legs (stubby)
+      fillEllipse(g, 22, 49, 4, 3, 'L');
+      fillEllipse(g, 34, 49, 4, 3, 'L');
+      // Feet (darker, on ground)
+      fillEllipse(g, 22, 51, 3, 1, 'D');
+      fillEllipse(g, 34, 51, 3, 1, 'D');
+      // Wings (small, on back behind body — drawn separately at sides)
+      fillEllipse(g, 9, 32, 4, 4, 'B');
+      fillEllipse(g, 6, 30, 2, 2, 'B');
+      fillEllipse(g, 47, 32, 4, 4, 'B');
+      fillEllipse(g, 50, 30, 2, 2, 'B');
+      // Antennae (top of head)
+      fillRect(g, 23, 7, 1, 3, 'L');
+      fillRect(g, 33, 7, 1, 3, 'L');
+      setPx(g, 23, 6, 'W');
+      setPx(g, 33, 6, 'W');
+      // Tail (small puff to one side)
+      fillEllipse(g, 44, 42, 3, 3, 'L');
+      // Outline now
+      addOutline(g, 'o');
+      // === Details on top ===
+      // Belly highlight (white)
+      fillEllipse(g, 28, 39, 8, 5, 'W');
+      // Eyes (serene closed crescents)
+      [[22,18],[23,17],[24,17],[25,18]].forEach(([x,y]) => setPx(g, x, y, 'e'));
+      [[31,18],[32,17],[33,17],[34,18]].forEach(([x,y]) => setPx(g, x, y, 'e'));
+      // Mouth (small smile, 5 px)
+      [[25,22],[26,23],[27,23],[28,23],[29,23],[30,23],[31,22]].forEach(([x,y]) => setPx(g, x, y, 'e'));
+      // Blush
+      setPx(g, 19, 20, 'k'); setPx(g, 20, 20, 'k');
+      setPx(g, 36, 20, 'k'); setPx(g, 37, 20, 'k');
+      // Forehead gem (purple)
+      setPx(g, 28, 12, 'p');
+      setPx(g, 28, 11, 'P');
+      // Chest gem
+      setPx(g, 28, 32, 'p');
+      // Halo (curve of gold pixels above head)
+      const haloY = 4;
+      const haloPts = [[19,5],[20,4],[22,3],[24,3],[26,3],[28,3],[30,3],[32,3],[34,3],[36,4],[37,5]];
+      haloPts.forEach(([x,y]) => setPx(g, x, y, 'g'));
+      // halo lighter inner
+      [[22,4],[26,4],[30,4],[34,4]].forEach(([x,y]) => setPx(g, x, y, 'W'));
+      // Wing detail dots (white highlights)
+      setPx(g, 7, 30, 'W');
+      setPx(g, 49, 30, 'W');
+      return gridToSvg(g, {
+        classMap: (c, x, y) => {
+          if (c === 'g' && y <= 5) return 'halo';
+          if (c === 'W' && y <= 5 && x >= 22 && x <= 34) return 'halo';
+          if (c === 'p' && y === 12 && x === 28) return 'gem-pulse';
+          if (c === 'P' && y === 11 && x === 28) return 'gem-pulse';
+          return '';
+        }
+      });
+    }
+
+    const builders = { '0': buildEgg, '1': buildMistini, '5': buildMistair, '9': buildCumulonite };
+    document.querySelectorAll('[data-stage]').forEach(el => {
+      const stage = el.dataset.stage;
+      const fn = builders[stage];
+      if (fn) el.innerHTML = fn();
+    });
+  </script>
+</body>
+</html>

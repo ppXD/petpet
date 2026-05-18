@@ -1,0 +1,39 @@
+{
+  "$schema": "petpet-preset/stages-v1",
+  "id": "balanced",
+  "name": "Balanced (5 stages)",
+  "tagline": "Moderate stages",
+  "description": "Five evolution moments — a satisfying arc without the per-stage sprite workload of the Extended preset.",
+  "stages": [
+    {
+      "id": "stage_0",
+      "name": "Stage 0",
+      "flavor": "Starting form.",
+      "trigger": { "metric": "level", "value": 0 }
+    },
+    {
+      "id": "stage_1",
+      "name": "Stage 1",
+      "flavor": "First growth.",
+      "trigger": { "metric": "level", "value": 3 }
+    },
+    {
+      "id": "stage_2",
+      "name": "Stage 2",
+      "flavor": "Showing personality.",
+      "trigger": { "metric": "level", "value": 15 }
+    },
+    {
+      "id": "stage_3",
+      "name": "Stage 3",
+      "flavor": "Coming into its own.",
+      "trigger": { "metric": "level", "value": 40 }
+    },
+    {
+      "id": "stage_4",
+      "name": "Stage 4",
+      "flavor": "Final form.",
+      "trigger": { "metric": "level", "value": 80 }
+    }
+  ]
+}

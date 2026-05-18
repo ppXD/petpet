@@ -1,0 +1,56 @@
+[
+  {
+    "kind": "shake",
+    "for": "3s",
+    "intensity": 4
+  },
+  {
+    "kind": "crack",
+    "after": "1s",
+    "for": "2s"
+  },
+  {
+    "kind": "burst",
+    "after": "3s",
+    "count": 30,
+    "colors": [
+      "#c8401c",
+      "#f5c024",
+      "#f5a020",
+      "#3a1d10"
+    ]
+  },
+  {
+    "kind": "flash",
+    "after": "5s",
+    "color": "#f5e8a8",
+    "for": "0.7s"
+  },
+  {
+    "kind": "ring",
+    "after": "5s",
+    "color": "#f5c024",
+    "for": "1.2s"
+  },
+  {
+    "kind": "confetti",
+    "after": "5.5s",
+    "for": "3s",
+    "colors": [
+      "#c8401c",
+      "#f5c024",
+      "#f5a020",
+      "#fde047",
+      "#b85cd8"
+    ]
+  },
+  {
+    "kind": "modal",
+    "after": "5s",
+    "title": "Your egg hatched!",
+    "body": "Last chance to name your companion.",
+    "calls": "pet_finalize_naming",
+    "confirm_label": "Confirm",
+    "cancel_label": "Skip"
+  }
+]

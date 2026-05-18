@@ -1,0 +1,19 @@
+{
+  "$schema": "petpet-preset/stages-v1",
+  "id": "extended",
+  "name": "Extended (10 stages)",
+  "tagline": "Many stages",
+  "description": "Ten evolution moments — slow reveal, many milestones, maximum sprite work.",
+  "stages": [
+    { "id": "stage_0", "name": "Stage 0", "flavor": "Starting form.",         "trigger": { "metric": "level", "value": 0  } },
+    { "id": "stage_1", "name": "Stage 1", "flavor": "First growth.",          "trigger": { "metric": "level", "value": 1  } },
+    { "id": "stage_2", "name": "Stage 2", "flavor": "Growing fast.",          "trigger": { "metric": "level", "value": 7  } },
+    { "id": "stage_3", "name": "Stage 3", "flavor": "Showing personality.",   "trigger": { "metric": "level", "value": 15 } },
+    { "id": "stage_4", "name": "Stage 4", "flavor": "Coming into its own.",   "trigger": { "metric": "level", "value": 25 } },
+    { "id": "stage_5", "name": "Stage 5", "flavor": "Confident.",             "trigger": { "metric": "level", "value": 40 } },
+    { "id": "stage_6", "name": "Stage 6", "flavor": "Skilled.",               "trigger": { "metric": "level", "value": 55 } },
+    { "id": "stage_7", "name": "Stage 7", "flavor": "Seasoned.",              "trigger": { "metric": "level", "value": 72 } },
+    { "id": "stage_8", "name": "Stage 8", "flavor": "Powerful.",              "trigger": { "metric": "level", "value": 86 } },
+    { "id": "stage_9", "name": "Stage 9", "flavor": "Legendary form.",        "trigger": { "metric": "level", "value": 99 } }
+  ]
+}

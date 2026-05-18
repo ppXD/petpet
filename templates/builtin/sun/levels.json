@@ -1,0 +1,405 @@
+{
+  "max_level": 99,
+  "entries": [
+    {
+      "level": 0,
+      "xp_required": 0
+    },
+    {
+      "level": 1,
+      "xp_required": 200
+    },
+    {
+      "level": 2,
+      "xp_required": 263
+    },
+    {
+      "level": 3,
+      "xp_required": 326
+    },
+    {
+      "level": 4,
+      "xp_required": 389
+    },
+    {
+      "level": 5,
+      "xp_required": 452
+    },
+    {
+      "level": 6,
+      "xp_required": 515
+    },
+    {
+      "level": 7,
+      "xp_required": 578
+    },
+    {
+      "level": 8,
+      "xp_required": 641
+    },
+    {
+      "level": 9,
+      "xp_required": 704
+    },
+    {
+      "level": 10,
+      "xp_required": 767
+    },
+    {
+      "level": 11,
+      "xp_required": 875
+    },
+    {
+      "level": 12,
+      "xp_required": 983
+    },
+    {
+      "level": 13,
+      "xp_required": 1091
+    },
+    {
+      "level": 14,
+      "xp_required": 1199
+    },
+    {
+      "level": 15,
+      "xp_required": 1307
+    },
+    {
+      "level": 16,
+      "xp_required": 1415
+    },
+    {
+      "level": 17,
+      "xp_required": 1523
+    },
+    {
+      "level": 18,
+      "xp_required": 1631
+    },
+    {
+      "level": 19,
+      "xp_required": 1739
+    },
+    {
+      "level": 20,
+      "xp_required": 1847
+    },
+    {
+      "level": 21,
+      "xp_required": 1955
+    },
+    {
+      "level": 22,
+      "xp_required": 2063
+    },
+    {
+      "level": 23,
+      "xp_required": 2171
+    },
+    {
+      "level": 24,
+      "xp_required": 2279
+    },
+    {
+      "level": 25,
+      "xp_required": 2387
+    },
+    {
+      "level": 26,
+      "xp_required": 2495
+    },
+    {
+      "level": 27,
+      "xp_required": 2603
+    },
+    {
+      "level": 28,
+      "xp_required": 2711
+    },
+    {
+      "level": 29,
+      "xp_required": 2819
+    },
+    {
+      "level": 30,
+      "xp_required": 2927
+    },
+    {
+      "level": 31,
+      "xp_required": 3161
+    },
+    {
+      "level": 32,
+      "xp_required": 3395
+    },
+    {
+      "level": 33,
+      "xp_required": 3629
+    },
+    {
+      "level": 34,
+      "xp_required": 3863
+    },
+    {
+      "level": 35,
+      "xp_required": 4097
+    },
+    {
+      "level": 36,
+      "xp_required": 4331
+    },
+    {
+      "level": 37,
+      "xp_required": 4565
+    },
+    {
+      "level": 38,
+      "xp_required": 4799
+    },
+    {
+      "level": 39,
+      "xp_required": 5033
+    },
+    {
+      "level": 40,
+      "xp_required": 5267
+    },
+    {
+      "level": 41,
+      "xp_required": 5501
+    },
+    {
+      "level": 42,
+      "xp_required": 5735
+    },
+    {
+      "level": 43,
+      "xp_required": 5969
+    },
+    {
+      "level": 44,
+      "xp_required": 6203
+    },
+    {
+      "level": 45,
+      "xp_required": 6437
+    },
+    {
+      "level": 46,
+      "xp_required": 6671
+    },
+    {
+      "level": 47,
+      "xp_required": 6905
+    },
+    {
+      "level": 48,
+      "xp_required": 7139
+    },
+    {
+      "level": 49,
+      "xp_required": 7373
+    },
+    {
+      "level": 50,
+      "xp_required": 7607
+    },
+    {
+      "level": 51,
+      "xp_required": 7841
+    },
+    {
+      "level": 52,
+      "xp_required": 8075
+    },
+    {
+      "level": 53,
+      "xp_required": 8309
+    },
+    {
+      "level": 54,
+      "xp_required": 8543
+    },
+    {
+      "level": 55,
+      "xp_required": 8777
+    },
+    {
+      "level": 56,
+      "xp_required": 9011
+    },
+    {
+      "level": 57,
+      "xp_required": 9245
+    },
+    {
+      "level": 58,
+      "xp_required": 9479
+    },
+    {
+      "level": 59,
+      "xp_required": 9713
+    },
+    {
+      "level": 60,
+      "xp_required": 9947
+    },
+    {
+      "level": 61,
+      "xp_required": 10181
+    },
+    {
+      "level": 62,
+      "xp_required": 10415
+    },
+    {
+      "level": 63,
+      "xp_required": 10649
+    },
+    {
+      "level": 64,
+      "xp_required": 10883
+    },
+    {
+      "level": 65,
+      "xp_required": 11117
+    },
+    {
+      "level": 66,
+      "xp_required": 11423
+    },
+    {
+      "level": 67,
+      "xp_required": 11729
+    },
+    {
+      "level": 68,
+      "xp_required": 12035
+    },
+    {
+      "level": 69,
+      "xp_required": 12341
+    },
+    {
+      "level": 70,
+      "xp_required": 12647
+    },
+    {
+      "level": 71,
+      "xp_required": 12953
+    },
+    {
+      "level": 72,
+      "xp_required": 13259
+    },
+    {
+      "level": 73,
+      "xp_required": 13565
+    },
+    {
+      "level": 74,
+      "xp_required": 13871
+    },
+    {
+      "level": 75,
+      "xp_required": 14177
+    },
+    {
+      "level": 76,
+      "xp_required": 14483
+    },
+    {
+      "level": 77,
+      "xp_required": 14789
+    },
+    {
+      "level": 78,
+      "xp_required": 15095
+    },
+    {
+      "level": 79,
+      "xp_required": 15401
+    },
+    {
+      "level": 80,
+      "xp_required": 15707
+    },
+    {
+      "level": 81,
+      "xp_required": 16013
+    },
+    {
+      "level": 82,
+      "xp_required": 16319
+    },
+    {
+      "level": 83,
+      "xp_required": 16625
+    },
+    {
+      "level": 84,
+      "xp_required": 16931
+    },
+    {
+      "level": 85,
+      "xp_required": 17237
+    },
+    {
+      "level": 86,
+      "xp_required": 17543
+    },
+    {
+      "level": 87,
+      "xp_required": 17849
+    },
+    {
+      "level": 88,
+      "xp_required": 18155
+    },
+    {
+      "level": 89,
+      "xp_required": 18461
+    },
+    {
+      "level": 90,
+      "xp_required": 18767
+    },
+    {
+      "level": 91,
+      "xp_required": 19073
+    },
+    {
+      "level": 92,
+      "xp_required": 19379
+    },
+    {
+      "level": 93,
+      "xp_required": 19685
+    },
+    {
+      "level": 94,
+      "xp_required": 19991
+    },
+    {
+      "level": 95,
+      "xp_required": 20297
+    },
+    {
+      "level": 96,
+      "xp_required": 20603
+    },
+    {
+      "level": 97,
+      "xp_required": 20909
+    },
+    {
+      "level": 98,
+      "xp_required": 21215
+    },
+    {
+      "level": 99,
+      "xp_required": 21521
+    }
+  ]
+}

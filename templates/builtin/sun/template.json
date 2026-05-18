@@ -1,0 +1,32 @@
+{
+  "$schema": "petpet-template/v1",
+  "meta": {
+    "id": "sun",
+    "name": "Sun",
+    "version": "1.0.0",
+    "author": "petpet-builtin",
+    "license": "MIT",
+    "description": "A monkey-king companion born from the magical stone of Huaguo Mountain. Medium difficulty — engaged users reach the final Buddha form in a few months of regular use."
+  },
+  "species": {
+    "name": "Sun",
+    "description": "Sun Wukong — the Stone Monkey turned Great Sage turned Victorious Buddha. Grows from stone-spark to enlightenment as you feed it tokens, prompts, and grinding sessions.",
+    "default_pet_name": "Wukong",
+    "flavor": "Born from heaven-and-earth stone."
+  },
+  "labels": [
+    { "text": "Medium", "color": "#f5c024", "fg": "#1a1a1a" },
+    { "text": "Wukong", "color": "#c8401c", "fg": "#ffffff" }
+  ],
+  "theme": {
+    "primary":   "#c8401c",
+    "secondary": "#f5c024",
+    "accent":    "#f5e8a8",
+    "palette":   ["#3a1d10", "#c8401c", "#f5a020", "#f5c024", "#f5e8a8", "#b85cd8"]
+  },
+  "assets": {
+    "sheet":  "sheet.png",
+    "frames": "sheet.json",
+    "thumb":  "thumb.png"
+  }
+}

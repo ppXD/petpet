@@ -1,0 +1,10 @@
+{
+  "id": "stage_7",
+  "name": "Stage 7",
+  "flavor": "Seasoned.",
+  "trigger": {
+    "metric": "level",
+    "value": 72
+  },
+  "attributes": {}
+}

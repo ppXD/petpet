@@ -1,0 +1,96 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+html, body, #root {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  color: #f1f5f9;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+.menu-root {
+  /* `display: inline-block` so the wrapper shrinks to its widest row,
+   * not the window viewport. Combined with the cap below, this keeps
+   * the menu visually tight even when the auto-resize is measuring
+   * scrollWidth — without the cap, the pixel-font status header would
+   * push the whole menu uncomfortably wide. */
+  display: inline-block;
+  margin: 4px;
+  padding: 5px 4px;
+  width: max-content;
+  max-width: 180px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  font-size: 12px;
+  animation: menu-appear 0.12s ease-out;
+}
+
+@keyframes menu-appear {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* ── Status header (pet name + level + stage + xp) ─────────────── */
+
+.menu-status {
+  padding: 6px 10px 7px;
+}
+.menu-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  font-size: 10px;
+}
+.menu-status-name { color: #f1f5f9; letter-spacing: 0.04em; }
+.menu-status-lvl  { color: #fde047; font-variant-numeric: tabular-nums; }
+
+.menu-status-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+.menu-status-xp { color: #6ee7b7; font-variant-numeric: tabular-nums; }
+
+/* ── Divider ───────────────────────────────────────────────────── */
+
+.menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 6px;
+}
+
+/* ── Items ─────────────────────────────────────────────────────── */
+
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: #f1f5f9;
+  padding: 7px 12px;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.08s ease;
+}
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.menu-item:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+.menu-item-warn { color: #fca5a5; }
+.menu-item-warn:hover { background: rgba(239, 68, 68, 0.18); }

@@ -1,0 +1,10 @@
+{
+  "id": "stage_1",
+  "name": "Stage 1",
+  "flavor": "First growth.",
+  "trigger": {
+    "metric": "level",
+    "value": 1
+  },
+  "attributes": {}
+}

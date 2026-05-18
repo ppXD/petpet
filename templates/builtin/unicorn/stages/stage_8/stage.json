@@ -1,0 +1,10 @@
+{
+  "id": "stage_8",
+  "name": "Stage 8",
+  "flavor": "Powerful.",
+  "trigger": {
+    "metric": "level",
+    "value": 86
+  },
+  "attributes": {}
+}

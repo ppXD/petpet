@@ -1,0 +1,43 @@
+[
+  {
+    "kind": "shake",
+    "for": "1.5s",
+    "intensity": 2
+  },
+  {
+    "kind": "flash",
+    "after": "1.5s",
+    "color": "#f5e8a8",
+    "for": "1.5s"
+  },
+  {
+    "kind": "ring",
+    "after": "1.8s",
+    "color": "#f5c024",
+    "for": "2s"
+  },
+  {
+    "kind": "burst",
+    "after": "2s",
+    "count": 40,
+    "colors": [
+      "#c8401c",
+      "#f5c024",
+      "#f5a020",
+      "#f5e8a8",
+      "#fde047"
+    ],
+    "for": "2s"
+  },
+  {
+    "kind": "confetti",
+    "after": "2.5s",
+    "for": "5s"
+  },
+  {
+    "kind": "bubble",
+    "after": "4s",
+    "text": "{{pet.name}} ascends to {{stage.name}}!",
+    "for": "5s"
+  }
+]

@@ -1,0 +1,1900 @@
+/* Pixel font — Press Start 2P from Google Fonts. Loaded at the very
+ * top so @import is the first statement (CSS spec requirement). */
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+:root {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, system-ui, sans-serif;
+  font-size: 13px;
+  color-scheme: dark;
+}
+
+html, body, #root {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+}
+
+/* Global box-sizing so `width: 100%` always means "fit the parent"
+ * regardless of padding + border. Prevents inputs / buttons from
+ * overflowing flex containers. */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+.app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 12px;
+  gap: 0;
+  /* No own background — Tauri window is transparent.
+   * Window is sized just to fit pet + info panel; all heavier UI
+   * (context menu, stats, picker) trigger-pops on demand. */
+}
+
+/* ── Pet sprite ──────────────────────────────────────────── */
+.pet-wrapper {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pet-wrapper:active {
+  cursor: grabbing;
+}
+
+.pet {
+  width: 128px;
+  height: 128px;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+}
+
+.pet-idle      { animation: pet-idle     2.6s ease-in-out infinite; }
+.pet-thinking  { animation: pet-thinking 2.2s ease-in-out infinite; }
+.pet-working   { animation: pet-working  0.45s ease-in-out infinite; }
+.pet-eating    { animation: pet-eat      0.35s ease-in-out infinite; }
+.pet-satisfied { animation: pet-bounce   0.6s ease-out 2; }
+
+.pet-svg {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  pointer-events: none;
+}
+
+.pet-sprite-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+@keyframes pet-idle {
+  0%, 100% { transform: scale(1.00, 1.00); }
+  50%      { transform: scale(1.05, 0.96); }
+}
+
+@keyframes pet-thinking {
+  0%, 100% { transform: rotate(-3deg) scale(1.00, 1.00); }
+  50%      { transform: rotate( 3deg) scale(1.03, 0.98); }
+}
+
+@keyframes pet-working {
+  0%, 100% { transform: translateY(0)   scale(1.02, 0.98); }
+  50%      { transform: translateY(-6px) scale(0.96, 1.06); }
+}
+
+@keyframes pet-eat {
+  0%, 100% { transform: scale(1.00, 1.00) translateY(0); }
+  50%      { transform: scale(0.92, 1.10) translateY(-4px); }
+}
+
+@keyframes pet-bounce {
+  0%   { transform: translateY(0)    scale(1.00, 1.00); }
+  30%  { transform: translateY(-14px) scale(0.93, 1.08); }
+  60%  { transform: translateY(0)    scale(1.08, 0.90); }
+  100% { transform: translateY(0)    scale(1.00, 1.00); }
+}
+
+/* ── Badge ───────────────────────────────────────────────── */
+.badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%) translateY(2px);
+  background: rgba(15, 23, 42, 0.72);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.12s ease;
+}
+
+.app:hover .badge {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.badge:hover {
+  background: rgba(30, 41, 59, 0.85);
+}
+
+.badge:active {
+  transform: translateX(-50%) scale(0.96);
+}
+
+.badge-tokens { color: #6ee7b7; font-size: 14px; }
+.badge-label  { color: #94a3b8; font-size: 10px; text-transform: uppercase; }
+
+.mood-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-left: 2px;
+  transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+.mood-dot-idle      { background: #475569; }
+.mood-dot-thinking  { background: #60a5fa; box-shadow: 0 0 6px #60a5fa; }
+.mood-dot-working   { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; animation: mood-pulse 0.6s ease-in-out infinite; }
+.mood-dot-eating    { background: #6ee7b7; box-shadow: 0 0 6px #6ee7b7; }
+.mood-dot-satisfied { background: #fde047; box-shadow: 0 0 8px #fde047; }
+
+@keyframes mood-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+/* ── GBA confirm modal (in-app, replaces OS-native dialogs) ──── */
+
+.gba-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  /* No backdrop tint — relies on the modal's own border + drop
+   * shadow for separation. Keeps the floating-pet / picker scenery
+   * visible behind it and avoids the heavy "dark overlay" look that
+   * fights the pixel-art aesthetic. The element still covers the
+   * viewport so clicking outside the box still resolves to dismiss. */
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+}
+
+.gba-confirm-box {
+  width: min(440px, 100% - 16px);
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 12px;
+  line-height: 1.6;
+  animation: modal-pop 0.18s ease-out;
+}
+
+.gba-confirm-body p {
+  margin: 0 0 6px 0;
+  font-size: 11px;
+  line-height: 1.7;
+  color: #1a1a1a;
+}
+.gba-confirm-body p:last-child {
+  margin-bottom: 0;
+}
+
+/* Action row sits closer to the body than the picker's default. */
+.gba-confirm-actions {
+  margin-top: 2px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.gba-confirm-actions .gba-button {
+  /* Cap so 3 buttons fit comfortably on a single row in the
+   * 440-px-wide dialog without each one stretching unreasonably. */
+  flex: 1 1 110px;
+  max-width: 180px;
+}
+
+/* ── Stats panel ─────────────────────────────────────────── */
+.panel {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  max-height: 60vh;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.88);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px 10px 10px;
+  font-size: 11px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.panel-head {
+  display: flex; justify-content: space-between; align-items: center;
+  font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: #94a3b8;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.panel-close {
+  background: none; border: 0; color: #94a3b8; font-size: 16px;
+  cursor: pointer; line-height: 1; padding: 0 4px;
+}
+.panel-close:hover { color: #f1f5f9; }
+
+.panel-recent {
+  display: flex; gap: 6px; align-items: center;
+  padding: 6px 0 4px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.panel-recent .model { color: #cbd5e1; }
+.panel-recent .delta { color: #6ee7b7; margin-left: auto; font-weight: 600; }
+
+.panel-activity {
+  display: flex; gap: 6px; align-items: center;
+  padding: 4px 0;
+  font-size: 10px;
+  color: #cbd5e1;
+}
+.panel-activity .activity-kind {
+  font-family: ui-monospace, "SF Mono", monospace;
+  color: #f59e0b;
+  letter-spacing: 0.02em;
+}
+
+.tag {
+  font-size: 9px; padding: 2px 6px; border-radius: 4px;
+  background: rgba(110, 231, 183, 0.15); color: #6ee7b7;
+  text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700;
+}
+.tag-codex { background: rgba(96, 165, 250, 0.15); color: #60a5fa; }
+.tag-custom_api { background: rgba(244, 114, 182, 0.15); color: #f472b6; }
+
+.panel-body { overflow-y: auto; max-height: 40vh; padding-right: 2px; }
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 999px; }
+
+.provider-block { padding: 4px 0; }
+.provider-head {
+  font-size: 9px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em;
+  margin: 4px 0 2px;
+}
+.model-row {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 2px 0;
+}
+.model-name { color: #cbd5e1; font-family: ui-monospace, "SF Mono", monospace; font-size: 10px; }
+.model-stats { font-variant-numeric: tabular-nums; }
+.model-stats .dim { color: #64748b; margin: 0 3px; }
+
+.panel-empty { color: #64748b; padding: 12px 0; text-align: center; }
+
+/* ═══════════════════════════════════════════════════════════════════
+ * GBA Pokémon-style components (EggPicker, ceremony modals, etc.)
+ * ═══════════════════════════════════════════════════════════════════
+ *
+ * Aesthetic: thick black borders, white interior, pixel font,
+ * sharp 1px highlights to fake the "raised" 3D look.
+ */
+
+.egg-picker-overlay {
+  position: fixed;
+  inset: 0;
+  /* Transparent — let Tauri's window transparency show through.
+   * Tiny padding so the gba-box's drop shadow doesn't get clipped. */
+  background: transparent;
+  display: flex;
+  align-items: stretch;          /* let the box fill the window */
+  justify-content: center;
+  z-index: 1000;
+  padding: 6px 6px 12px 6px;     /* extra bottom for box's 6px drop shadow */
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  color: #1a1a1a;
+}
+
+.gba-box {
+  background: #f8f8f8;
+  border: 4px solid #1a1a1a;
+  border-radius: 10px;
+  padding: 18px;
+  color: #1a1a1a;
+  /* Pokémon dialog look: 2px white inset highlight, 2px medium grey
+   * second border, then crisp black main border. */
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 6px #d8d8d8,
+    0 6px 0 #444444;
+  position: relative;
+}
+
+.gba-box-inset {
+  background: #fff;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #c8c8c8;
+  padding: 12px 14px;
+}
+
+/* ── Egg picker layout (fully fluid, ~2× scaled) ─────────────────── */
+
+.egg-picker {
+  /* Fill the whole visible window — the OS window is what defines
+   * picker size, the picker box fills it entirely. */
+  width: 100%;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow: hidden;
+}
+
+.gba-title {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  padding: 4px 0 12px;
+  border-bottom: 3px solid #1a1a1a;
+  text-shadow: 2px 2px 0 #d8d8d8;
+  flex-shrink: 0;
+  cursor: grab;
+}
+.gba-title:active { cursor: grabbing; }
+
+/* Variant: title row that hosts a corner action button. Layout
+   pattern: [spacer] [title text, flex-grow] [action button]. The
+   spacer mirrors the action button's width so the title text stays
+   visually centered regardless of action presence. Used by surfaces
+   that need a "+ NEW" or similar always-visible affordance without
+   sacrificing a list row. */
+.gba-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 4px 4px 12px;
+}
+.gba-title-spacer {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+}
+.gba-title-text {
+  flex: 1 1 auto;
+  text-align: center;
+  /* preserve the original text-shadow inherited via .gba-title */
+}
+
+/* Corner action button — smaller and squarer than .gba-button, but
+   shares the same pixel-art chrome (black border + inset highlight
+   + bottom shadow that collapses on click) so it reads as a member
+   of the GBA button family. Sized to fit comfortably in a title row
+   without overpowering the title text. */
+.gba-title-action {
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  font-size: 18px;
+  line-height: 1;
+  color: #1a1a1a;
+  background: #f8f8f8;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 0 1px #ffffff,
+    inset 0 0 0 3px #d8d8d8,
+    0 3px 0 #1a1a1a;
+  transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.1s;
+  /* Lift visually off the title baseline so the drop-shadow doesn't
+     get clipped by the .gba-title border-bottom. */
+  transform: translateY(-1px);
+  /* Make sure the button captures clicks even inside a drag region
+     (Tauri honors interactive descendants but we belt-and-braces). */
+  position: relative;
+  z-index: 1;
+}
+.gba-title-action:hover {
+  background: #fff8c8;
+}
+.gba-title-action:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 1px #ffffff,
+    inset 0 0 0 3px #d8d8d8,
+    0 0 0 #1a1a1a;
+}
+.gba-title-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.egg-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 3px solid #1a1a1a;
+  background: #fff;
+  padding: 6px 0;
+  border-radius: 6px;
+  /* Grow to absorb all available vertical space — keeps the picker
+   * vertically adaptive (no empty whitespace below description). */
+  flex: 1 1 0;
+  min-height: 140px;
+  overflow-y: auto;
+  /* Pixel-style chunky scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.egg-list::-webkit-scrollbar {
+  width: 16px;
+}
+.egg-list::-webkit-scrollbar-track {
+  background: #ddd;
+  border-left: 3px solid #1a1a1a;
+}
+.egg-list::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 3px solid #1a1a1a;
+  border-radius: 0;
+  min-height: 40px;
+  background-image: linear-gradient(
+    90deg,
+    #aaa 0%, #aaa 30%, #666 30%, #666 70%, #aaa 70%, #aaa 100%
+  );
+}
+.egg-list::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+.egg-list::-webkit-scrollbar-button {
+  display: none;
+}
+
+.egg-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-size: 15px;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: background 0.05s ease;
+  flex-shrink: 0;
+}
+
+.egg-row.selected {
+  background: #f8d850;
+}
+
+.egg-row .cursor {
+  width: 22px;
+  text-align: center;
+  color: #1a1a1a;
+  font-weight: 700;
+  font-size: 18px;
+  animation: cursor-blink 0.9s steps(2) infinite;
+}
+
+.egg-row:not(.selected) .cursor {
+  animation: none;
+  visibility: hidden;
+}
+
+/* "+ Create new template…" creator tile at the end of the egg list.
+ * Visually muted (dashed border, dim text) so it reads as an action
+ * affordance, not a real template the user could pick to hatch from. */
+.egg-row-new {
+  border-top: 2px dashed #aaa;
+  background: #fafafa;
+  color: #777;
+}
+.egg-row-new:hover {
+  background: #fff8c8;
+  color: #1a1a1a;
+}
+.egg-row-new-glyph {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: 700;
+  color: #aaa;
+  border: 2px dashed #ccc;
+  border-radius: 4px;
+  background: #f4f4f4;
+}
+.egg-row-new:hover .egg-row-new-glyph {
+  color: #1a1a1a;
+  border-color: #888;
+}
+
+@keyframes cursor-blink {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0.4; }
+}
+
+/* Template preview thumbnail — either real template image or
+ * monochrome placeholder. Pixelated rendering keeps sprite art crisp. */
+.template-preview {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  flex-shrink: 0;
+  display: block;
+  background: #f4f4f4;
+  border: 2px solid #d0d0d0;
+  border-radius: 4px;
+}
+
+.egg-name {
+  flex: 1 1 0;
+  min-width: 0;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Stacked block — name on top, author chip below. Replaces the bare
+ * `.egg-name` span so the author byline doesn't push the rest of the
+ * row out of alignment. */
+.egg-name-block {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.egg-name-block .egg-name {
+  flex: 0 0 auto;
+}
+.egg-author {
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Labels — uniform grey badges, NOT theme-driven. */
+.egg-labels {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  max-width: 40%;
+}
+
+.egg-label {
+  font-size: 9px;
+  padding: 4px 7px;
+  border: 2px solid #1a1a1a;
+  border-radius: 3px;
+  letter-spacing: 0.08em;
+  background: #ececec;
+  color: #1a1a1a;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+.egg-empty {
+  text-align: center;
+  color: #888;
+  padding: 26px 12px;
+  font-size: 14px;
+}
+
+.egg-desc {
+  font-size: 12px;
+  line-height: 1.8;
+  flex-shrink: 0;
+  /* Natural height up to ~25% of viewport — long descriptions scroll
+   * inside their own box rather than push the list off. */
+  max-height: 25vh;
+  overflow-y: auto;
+}
+.egg-desc-flavor {
+  font-style: italic;
+  color: #555;
+  margin-bottom: 6px;
+}
+.egg-desc-body {
+  color: #1a1a1a;
+}
+
+/* ── Name modal (pops after egg selected) ────────────────────────── */
+
+.name-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  /* Semi-transparent so picker behind is still hint-visible but
+   * dimmed. Backdrop also acts as a click-to-cancel target. */
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 12px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+}
+
+.name-modal {
+  width: min(480px, 100% - 8px);
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-size: 13px;
+  line-height: 1.6;
+  animation: modal-pop 0.18s ease-out;
+}
+
+@keyframes modal-pop {
+  0%   { transform: scale(0.86); opacity: 0; }
+  60%  { transform: scale(1.04); opacity: 1; }
+  100% { transform: scale(1.00); }
+}
+
+.name-modal-body {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;   /* let form fill body width */
+  gap: 14px;
+  padding: 8px 0;
+  width: 100%;
+  min-width: 0;            /* allow shrink */
+}
+
+.name-modal-egg {
+  align-self: center;
+  animation: egg-wobble 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 4px 0 rgba(0, 0, 0, 0.2));
+}
+
+@keyframes egg-wobble {
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  50%      { transform: rotate(4deg)  translateY(-3px); }
+}
+
+.name-modal-prompt {
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #1a1a1a;
+  padding: 0 8px;
+}
+
+.name-modal form {
+  width: 100%;
+  min-width: 0;
+  display: block;
+}
+
+.name-modal input {
+  font-family: inherit;
+  font-size: 18px;
+  padding: 14px 16px;
+  background: #fff;
+  border: 3px solid #1a1a1a;
+  border-radius: 5px;
+  color: #1a1a1a;
+  outline: none;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;   /* defensive: ensure padding+border fit in 100% */
+  text-align: center;
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 5px #d8d8d8;
+  letter-spacing: 0.06em;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.name-modal input:focus {
+  background: #fff8c8;
+}
+
+.name-modal input::placeholder {
+  color: #aaa;
+  font-size: 16px;
+}
+
+.name-modal-hint {
+  font-size: 10px;
+  color: #888;
+  letter-spacing: 0.08em;
+  text-align: center;
+  margin-top: -4px;
+}
+
+/* ── Buttons (Pokémon press-down feel) ───────────────────────────── */
+
+.picker-actions {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.gba-button {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 14px 22px;
+  background: #f8f8f8;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  cursor: pointer;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #d8d8d8,
+    0 5px 0 #1a1a1a;
+  letter-spacing: 0.06em;
+  transition: transform 0.06s ease, box-shadow 0.06s ease;
+  flex: 1 1 auto;
+  max-width: 220px;
+}
+
+.gba-button:hover:not(:disabled) {
+  background: #fff8c8;
+}
+
+.gba-button:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #d8d8d8,
+    0 0 0 #1a1a1a;
+}
+
+.gba-button.primary {
+  background: #3070d8;
+  color: #fff;
+  box-shadow:
+    inset 0 0 0 2px #6098e8,
+    inset 0 0 0 5px #2050a0,
+    0 5px 0 #102868;
+}
+.gba-button.primary:hover:not(:disabled) { background: #4080e8; }
+.gba-button.primary:active:not(:disabled) {
+  transform: translateY(5px);
+  box-shadow:
+    inset 0 0 0 2px #6098e8,
+    inset 0 0 0 5px #2050a0,
+    0 0 0 #102868;
+}
+
+.gba-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Footer hints / errors ───────────────────────────────────────── */
+
+.picker-hint {
+  text-align: center;
+  font-size: 11px;
+  color: #888;
+  margin-top: 4px;
+  letter-spacing: 0.12em;
+}
+
+.picker-error {
+  background: #ffe0e0;
+  border: 3px solid #c83030;
+  color: #800000;
+  padding: 10px 14px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+
+/* ── Template creator modal (in-EggPicker form for scaffolding a
+ *    new template). Reuses the .gba-box / .gba-button family + the
+ *    NameModal's input chrome so it visually rhymes with the existing
+ *    hatch-naming flow. ─────────────────────────────────────────── */
+
+.creator-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2500;
+  padding: 12px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+}
+
+.creator-box {
+  width: min(520px, 100% - 16px);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+  animation: modal-pop 0.18s ease-out;
+}
+.creator-title {
+  cursor: default;
+  font-size: 14px;
+  padding: 2px 0 10px;
+}
+
+.creator-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+.creator-label {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: #1a1a1a;
+  margin-top: 4px;
+}
+.creator-input {
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 3px solid #1a1a1a;
+  border-radius: 5px;
+  color: #1a1a1a;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  box-shadow: inset 0 0 0 2px #fff, inset 0 0 0 5px #d8d8d8;
+  letter-spacing: 0.04em;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.creator-input:focus {
+  background: #fff8c8;
+}
+.creator-input::placeholder {
+  color: #aaa;
+  font-size: 11px;
+}
+.creator-textarea {
+  resize: vertical;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.creator-id-hint {
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: #f4f4f4;
+  border: 2px solid #d0d0d0;
+  border-radius: 4px;
+}
+.creator-id-hint code {
+  font-family: ui-monospace, "SF Mono", monospace;
+  color: #1a1a1a;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.creator-explainer {
+  font-size: 9px;
+  color: #777;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  margin-top: 4px;
+}
+.creator-explainer code {
+  font-family: ui-monospace, "SF Mono", monospace;
+  color: #1a1a1a;
+  font-size: 9px;
+  padding: 1px 4px;
+  background: #f0f0f0;
+  border-radius: 3px;
+  letter-spacing: 0;
+}
+
+/* Section header — slightly heavier than a regular .creator-label so
+   the form visually splits into Identity / Preset / Preview blocks
+   without needing horizontal rules. */
+.creator-section-label {
+  font-size: 10px;
+  color: #1a1a1a;
+  margin-top: 12px;
+  padding-top: 8px;
+  border-top: 2px dashed #d0d0d0;
+}
+
+/* ── Shared select chrome (used inside the editors' quick-fill row) */
+.creator-select {
+  font-family: inherit;
+  font-size: 11px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  background: #fff;
+  color: #1a1a1a;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  box-shadow:
+    inset 0 0 0 1px #ffffff,
+    inset 0 0 0 3px #d8d8d8;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.creator-select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.creator-select:focus {
+  outline: none;
+  background: #fff8c8;
+}
+
+/* ── Configuration rows (Levels / Stages summary buttons) ──────────
+   Vertically-stacked single-line rows inside the creator's main form.
+   Each row reads as: [LEVELS]  100 levels (Short)  ▸
+   - Title is left-anchored at a fixed width so both rows' summaries
+     align vertically (visual rhythm)
+   - Summary chip takes the flexible middle space and truncates
+     with ellipsis if it grows long ("custom" + many entries)
+   - Chevron on the right signals "click to drill into the editor"
+   Replaces the previous side-by-side three-line cards which felt
+   crowded and added noise without information density. */
+
+.creator-config-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+.creator-config-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: #f8f8f8;
+  border: 3px solid #1a1a1a;
+  color: #1a1a1a;
+  cursor: pointer;
+  border-radius: 5px;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 4px #d8d8d8,
+    0 3px 0 #1a1a1a;
+  font-family: inherit;
+  text-align: left;
+  transition: transform 0.06s ease, box-shadow 0.06s ease, background 0.1s;
+}
+.creator-config-card:hover:not(:disabled) {
+  background: #fff8c8;
+}
+.creator-config-card:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 4px #d8d8d8,
+    0 0 0 #1a1a1a;
+}
+.creator-config-card:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.creator-config-card-title {
+  flex: 0 0 auto;
+  /* Fixed width so LEVELS and STAGES titles align in a column,
+     and the summary chips that follow align with each other too. */
+  min-width: 64px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+}
+.creator-config-card-sub {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  color: #3070d8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.creator-config-card-chevron {
+  flex: 0 0 auto;
+  font-size: 12px;
+  color: #888;
+  line-height: 1;
+}
+
+/* ── Editor modal (Levels / Stages full editors) ────────────────────
+   Modal-on-modal: sits above the creator (z-index 2700) with a
+   slightly translucent backdrop so the user can see the creator
+   sleeping behind. Backdrop click dismisses without saving — the
+   Save button is the only path that commits edits back to the
+   creator's state. Same `gba-box` chrome so it visually rhymes with
+   the creator and the GBA dialogs we ship elsewhere. */
+
+.editor-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2700;
+  padding: 16px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  animation: editor-fade 0.12s ease-out;
+}
+@keyframes editor-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.editor-box {
+  width: min(480px, 100% - 16px);
+  max-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  font-size: 11px;
+  line-height: 1.5;
+  animation: modal-pop 0.16s ease-out;
+}
+.editor-box-wide {
+  width: min(640px, 100% - 16px);
+}
+.editor-title {
+  cursor: default;
+  font-size: 13px;
+  padding: 2px 0 8px;
+}
+
+/* Top quick-fill bar — preset dropdown + Apply, matches the
+   .picker-actions button row vibe but smaller. */
+.editor-quickfill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px dashed #d0d0d0;
+}
+.editor-quickfill-label {
+  flex-shrink: 0;
+  color: #555;
+  letter-spacing: 0.04em;
+}
+.editor-quickfill-select {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.editor-quickfill-btn {
+  flex: 0 0 auto;
+  font-size: 11px;
+  padding: 8px 14px;
+  /* override .gba-button's flex: 1 1 auto so it doesn't stretch */
+  max-width: none;
+}
+
+.editor-summary {
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.02em;
+  padding: 4px 0 2px;
+}
+
+/* Scrollable editable row list — fixed max-height so the modal stays
+   below the viewport even for a 100-entry levels curve. */
+.editor-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  background: #f4f4f4;
+  border: 2px solid #d0d0d0;
+  border-radius: 4px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.editor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: #fff;
+  border: 1px solid #d8d8d8;
+  border-radius: 3px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.editor-row-idx {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 56px;
+  height: 22px;
+  padding: 0 6px;
+  background: #3070d8;
+  color: #fff;
+  font-size: 9px;
+  border-radius: 3px;
+  font-family: ui-monospace, "SF Mono", monospace;
+  letter-spacing: 0;
+}
+.editor-row-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 11px;
+  padding: 4px 6px;
+  background: #fff;
+  border: 2px solid #1a1a1a;
+  border-radius: 3px;
+  color: #1a1a1a;
+  letter-spacing: 0;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.editor-row-input:focus {
+  outline: none;
+  background: #fff8c8;
+}
+.editor-row-input:disabled {
+  background: #f0f0f0;
+  color: #888;
+  cursor: not-allowed;
+}
+.editor-row-unit {
+  flex-shrink: 0;
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.02em;
+}
+.editor-row-del {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 2px solid #1a1a1a;
+  border-radius: 3px;
+  background: #fff;
+  color: #c83030;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.editor-row-del:hover:not(:disabled) {
+  background: #ffd0d0;
+}
+.editor-row-del:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Stage editor rows fan out wider — name + flavour + trigger live on
+   one line within the row, with the row growing taller via wrap when
+   the modal is narrow. */
+.editor-stage-row {
+  align-items: flex-start;
+}
+.editor-stage-fields {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.editor-stage-name {
+  font-family: inherit;
+}
+.editor-stage-flavor {
+  font-family: inherit;
+  font-size: 10px;
+  color: #555;
+}
+.editor-stage-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.editor-stage-level {
+  flex: 0 0 auto;
+  width: 60px;
+  text-align: right;
+}
+
+/* Per-stage sprite picker column. Lives between the stage_N badge
+   and the name/flavor/trigger field stack. Three rows tall:
+     [ thumbnail / placeholder ]   ← clickable button, opens file dialog
+     [ Pick / Change           ]   ← redundant text affordance
+     [ Default (only if set)   ]   ← clears the pick, reverts to remap
+   Sprites are pixel art so we lean hard on `image-rendering:
+   pixelated` to avoid the browser's smoothing turning crisp 16x16
+   sprites into a smear.
+   Column is 72px wide — enough for "Default" at 8px Press Start 2P
+   (Press Start is wide, ~9-10px per char; 7 chars × 9.5 ≈ 67px
+   plus 4px padding fits comfortably). */
+.editor-stage-sprite {
+  flex: 0 0 auto;
+  width: 72px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+.editor-sprite-thumb {
+  width: 72px;
+  height: 56px;
+  padding: 2px;
+  background: #fafafa;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  transition: background 0.1s, box-shadow 0.06s ease;
+  box-shadow: inset 0 0 0 1px #ffffff, inset 0 0 0 3px #d8d8d8;
+}
+.editor-sprite-thumb:hover {
+  background: #fff8c8;
+}
+.editor-sprite-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  pointer-events: none;
+}
+.editor-sprite-thumb.is-empty {
+  background: repeating-linear-gradient(
+    45deg,
+    #fafafa,
+    #fafafa 4px,
+    #eaeaea 4px,
+    #eaeaea 8px
+  );
+}
+.editor-sprite-thumb.has-image {
+  background: #fff;
+}
+.editor-sprite-glyph {
+  font-size: 22px;
+  line-height: 1;
+  color: #b0b0b0;
+  font-family: inherit;
+}
+.editor-sprite-pick,
+.editor-sprite-clear {
+  font-family: inherit;
+  font-size: 8px;
+  letter-spacing: 0.02em;
+  padding: 3px 2px;
+  background: #f8f8f8;
+  color: #1a1a1a;
+  border: 1px solid #1a1a1a;
+  border-radius: 3px;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.1s;
+  /* Safety net — should never trigger at 72px width / 8px font, but
+     if a future label exceeds the budget the text clips instead of
+     blowing out the column and shoving the rest of the row off-screen. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.editor-sprite-pick:hover,
+.editor-sprite-clear:hover {
+  background: #fff8c8;
+}
+.editor-sprite-clear {
+  background: #f4f4f4;
+  color: #555;
+  font-style: italic;
+}
+
+/* + Add row button — visually subordinate to the row list it
+   extends. Dashed border + neutral background signal "this isn't
+   a primary action like Save". */
+.editor-add-row {
+  font-family: inherit;
+  font-size: 10px;
+  padding: 8px;
+  background: #fafafa;
+  color: #555;
+  border: 2px dashed #b0b0b0;
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+.editor-add-row:hover {
+  background: #fff8c8;
+  color: #1a1a1a;
+  border-color: #1a1a1a;
+}
+
+/* ── "+" Add-new-pet button (small, sits in corner of main app) ──── */
+
+.add-pet-btn {
+  position: fixed;
+  top: 8px;
+  right: 8px;
+  z-index: 100;
+  width: 28px;
+  height: 28px;
+  background: rgba(15, 23, 42, 0.7);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: background 0.12s ease, transform 0.12s ease;
+}
+.add-pet-btn:hover {
+  background: rgba(30, 41, 59, 0.9);
+  transform: scale(1.08);
+}
+.add-pet-btn:active { transform: scale(0.94); }
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Pet area — unified GBA dialog-style info panel (one box says
+ * everything: name, level, xp bar, stage, next evolution). Hidden by
+ * default, fades in on hover. Absolute-positioned below the sprite
+ * so layout never shifts.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+.pet-area {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0;
+  /* Info panel + dev row + badge are all position:absolute now,
+   * so pet-area only needs to size to the sprite itself. */
+}
+
+.pet-info-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-3px);
+
+  /* Soft dark glass — no heavy frame. Sits ON the desktop, not as
+   * a popup dialog. Pixel font keeps the retro identity. */
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 6px;
+  padding: 7px 11px;
+
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  color: #f1f5f9;
+  min-width: 140px;
+  max-width: calc(100vw - 8px);
+
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  opacity: 0;
+  /* Default (hide) path has a small delay so the 6px gap between
+   * pet-wrapper and info panel doesn't flicker the panel away when
+   * the cursor transits between them. */
+  transition: opacity 0.18s ease 0.12s, transform 0.18s ease 0.12s;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* Hover trigger is driven by Rust cursor polling (via .cursor-in class)
+ * rather than CSS :hover, because macOS doesn't synthesize mouseenter
+ * after set_ignore_cursor_events flips with the cursor already inside.
+ * .pet-info-panel:hover is kept so panel stays visible when cursor
+ * sits on it directly. */
+.pet-area.cursor-in .pet-info-panel,
+.pet-area:hover .pet-info-panel,
+.pet-info-panel:hover {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+
+.pet-info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+/* Row 1: name + level */
+.pet-info-head {
+  font-size: 10px;
+}
+.pet-info-head .pet-name {
+  color: #f1f5f9;
+  letter-spacing: 0.04em;
+}
+.pet-info-head .lvl {
+  color: #fde047;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Row 2: thin XP bar + inline numbers */
+.pet-info-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pet-info-xp-row .xp-bar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pet-info-xp-row .xp-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(to bottom, #7eb0e8, #2050a0);
+  transition: width 0.45s cubic-bezier(0.2, 0.7, 0.2, 1);
+  border-radius: 2px;
+}
+.pet-info-xp-row .xp-numbers {
+  font-size: 7px;
+  color: #cbd5e1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+/* Row 3: stage name + next evolution (subtle, dim) */
+.pet-info-foot {
+  font-size: 7px;
+  color: #94a3b8;
+}
+.pet-info-foot .stage-name {
+  color: #cbd5e1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.pet-info-foot .next-evo-text {
+  color: #8d9cb8;
+  letter-spacing: 0.03em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pet-info-foot .next-evo-text b {
+  color: #fde047;
+  font-weight: normal;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Pet right-click context menu — holds all dev/admin controls
+ * (XP grants, reset, stats panel, change companion). Hidden until
+ * user right-clicks the pet sprite. Keeps the default canvas clean.
+ * ═══════════════════════════════════════════════════════════════════ */
+
+.pet-context-menu {
+  position: absolute;
+  z-index: 1500;
+  min-width: 140px;
+  max-width: calc(100vw - 8px);
+  padding: 4px 3px;
+  background: rgba(15, 23, 42, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.5);
+  font-family: -apple-system, "SF Pro Text", system-ui, sans-serif;
+  font-size: 12px;
+  color: #f1f5f9;
+  animation: menu-appear 0.12s ease-out;
+}
+
+@keyframes menu-appear {
+  from { opacity: 0; transform: scale(0.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.menu-info-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 5px;
+  font-size: 10px;
+  color: #94a3b8;
+  letter-spacing: 0.04em;
+}
+.menu-info-row .menu-info-label {
+  text-transform: uppercase;
+  flex: 1 1 auto;
+}
+.menu-info-row .menu-info-value {
+  color: #6ee7b7;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0;
+}
+
+.menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 4px 6px;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: #f1f5f9;
+  padding: 6px 12px;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.08s ease;
+}
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.menu-item:active {
+  background: rgba(255, 255, 255, 0.14);
+}
+.menu-item-warn {
+  color: #fca5a5;
+}
+.menu-item-warn:hover {
+  background: rgba(239, 68, 68, 0.18);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Dev XP buttons (testing — easy to spot, ungate in production)
+ * ═══════════════════════════════════════════════════════════════════ */
+
+.dev-row {
+  position: absolute;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(2px);
+  display: flex;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.app:hover .dev-row {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+.dev-btn {
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fde047;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 0.04em;
+  transition: background 0.12s, transform 0.08s;
+}
+.dev-btn:hover { background: rgba(245, 158, 11, 0.28); }
+.dev-btn:active { transform: scale(0.94); }
+.dev-btn-big {
+  background: rgba(167, 139, 250, 0.18);
+  color: #c8a8ff;
+  border-color: rgba(167, 139, 250, 0.4);
+}
+.dev-btn-big:hover { background: rgba(167, 139, 250, 0.32); }
+
+.dev-btn-reset {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.4);
+  margin-left: auto;
+}
+.dev-btn-reset:hover { background: rgba(239, 68, 68, 0.3); }
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Pet sprite — stage-aware extras (shake during ceremony,
+ * floating sparkle on stage 7+)
+ * ═══════════════════════════════════════════════════════════════════ */
+
+.pet-shaking { animation: pet-shake 0.18s ease-in-out infinite; }
+@keyframes pet-shake {
+  0%, 100% { transform: translate(0, 0) rotate(0); }
+  25%      { transform: translate(-3px, 1px) rotate(-2deg); }
+  50%      { transform: translate(2px, -1px) rotate(2deg); }
+  75%      { transform: translate(-2px, 1px) rotate(-1deg); }
+}
+
+.pet-svg .float-sparkle {
+  animation: float-sparkle 1.6s ease-in-out infinite;
+  transform-box: fill-box;
+}
+@keyframes float-sparkle {
+  0%, 100% { opacity: 0.5; transform: scale(0.85); }
+  50%      { opacity: 1;   transform: scale(1.15); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+ * Ceremony player — fixed-position overlay for hatch / evolve effects
+ * ═══════════════════════════════════════════════════════════════════ */
+
+.ceremony-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 800;
+  overflow: hidden;
+}
+
+.fx-flash {
+  position: absolute;
+  inset: 0;
+  background: #ffffff;
+  pointer-events: none;
+}
+
+.fx-ring {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 200px; height: 200px;
+  border: 4px solid #7eb0e8;
+  border-radius: 999px;
+  transform-origin: center;
+  pointer-events: none;
+}
+
+.fx-burst {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx-burst > span {
+  position: absolute;
+  left: 50%; top: 50%;
+  border-radius: 999px;
+  display: block;
+  will-change: transform, opacity;
+}
+
+.fx-sparkles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.fx-sparkles > span {
+  position: absolute;
+  border-radius: 2px;
+  display: block;
+  will-change: transform, opacity;
+}
+
+.fx-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.fx-confetti > span {
+  position: absolute;
+  width: 6px;
+  height: 10px;
+  border-radius: 1px;
+  display: block;
+  will-change: transform, top, opacity;
+}
+
+.fx-crack {
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 140px; height: 140px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.fx-bubble {
+  position: absolute;
+  left: 50%;
+  top: 16%;
+  transform: translateX(-50%);
+  background: #ffffff;
+  color: #1a1a1a;
+  border: 3px solid #1a1a1a;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #d8d8d8,
+    0 3px 0 #444;
+  animation: bubble-pop 0.18s ease-out;
+}
+@keyframes bubble-pop {
+  0%   { transform: translateX(-50%) scale(0.7); opacity: 0; }
+  60%  { transform: translateX(-50%) scale(1.08); opacity: 1; }
+  100% { transform: translateX(-50%) scale(1.00); }
+}
+
+/* ── Ceremony modal (reuses gba-box family from EggPicker) ───────── */
+
+.ceremony-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  /* Cover only the pet sprite zone — 12px app padding-top + 128px
+   * pet sprite = 140px. Modal vertical center aligns with pet's,
+   * info panel below the pet stays uncovered. */
+  height: 140px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 4px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  /* Click-through everywhere except on the modal itself. */
+  pointer-events: none;
+}
+.ceremony-modal {
+  /* Re-enable clicks on the actual modal. */
+  pointer-events: auto;
+  width: min(148px, 100% - 8px);
+  max-height: calc(100vh - 16px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 10px 9px;
+  font-size: 9px;
+  line-height: 1.5;
+  animation: modal-pop 0.18s ease-out;
+}
+.ceremony-modal .gba-title {
+  font-size: 11px;
+  padding: 2px 0 8px;
+  border-bottom-width: 2px;
+  text-shadow: 1px 1px 0 #d8d8d8;
+}
+.ceremony-modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px 0;
+}
+.ceremony-modal-text {
+  text-align: center;
+  font-size: 9px;
+  line-height: 1.7;
+  color: #1a1a1a;
+  padding: 0 2px;
+}
+.ceremony-modal input {
+  font-family: inherit;
+  font-size: 12px;
+  padding: 8px 10px;
+  background: #fff;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  color: #1a1a1a;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px #fff, inset 0 0 0 3px #d8d8d8;
+  letter-spacing: 0.05em;
+  -webkit-user-select: text;
+  user-select: text;
+}
+.ceremony-modal input:focus { background: #fff8c8; }
+.ceremony-modal .picker-actions {
+  gap: 8px;
+  margin-top: 2px;
+}
+.ceremony-modal .gba-button {
+  font-size: 10px;
+  padding: 8px 10px;
+  max-width: none;
+  box-shadow:
+    inset 0 0 0 1px #ffffff,
+    inset 0 0 0 3px #d8d8d8,
+    0 3px 0 #1a1a1a;
+}
+.ceremony-modal .gba-button.primary {
+  box-shadow:
+    inset 0 0 0 1px #6098e8,
+    inset 0 0 0 3px #2050a0,
+    0 3px 0 #102868;
+}
+.ceremony-modal .gba-button:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow:
+    inset 0 0 0 1px #ffffff,
+    inset 0 0 0 3px #d8d8d8,
+    0 0 0 #1a1a1a;
+}
+.ceremony-modal .gba-button.primary:active:not(:disabled) {
+  box-shadow:
+    inset 0 0 0 1px #6098e8,
+    inset 0 0 0 3px #2050a0,
+    0 0 0 #102868;
+}
+

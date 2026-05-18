@@ -1,0 +1,1365 @@
+/* Dashboard (trainer card) — reuses .gba-box / .gba-button /
+ * .picker-error / .picker-actions from App.css for visual consistency
+ * with the EggPicker and PetSwitcher. */
+
+.dash-overlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  z-index: 1000;
+  padding: 6px 6px 12px 6px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  color: #1a1a1a;
+}
+
+/* Overview shell — ONE unified GBA-box frame wrapping both the
+ * sidebar and the main pane. Padding removed so the two halves butt
+ * directly against the inner edge of the frame.
+ *
+ * **Inset shadows overridden**: `.gba-box`'s default chrome includes
+ * `inset 0 0 0 2px #fff` + `inset 0 0 0 6px #d8d8d8`, which would
+ * paint white + grey rings across the top and bottom of the divider,
+ * making it look like it doesn't reach the chrome edge. We keep only
+ * the outer drop-shadow so the divider line is unbroken from top
+ * to bottom inside the frame.
+ *
+ * Each half gets its own background tint so the two boxes read as
+ * distinct regions even without per-side borders. */
+.dash-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+  font-size: 13px;
+  line-height: 1.5;
+  /* Override .gba-box's inset chrome — only the drop shadow stays. */
+  box-shadow: 0 6px 0 #444444;
+  /* The outer background is transparent so each half's own tint
+   * shows edge-to-edge instead of fighting with .gba-box's grey. */
+  background: transparent;
+}
+
+.dash-box {
+  width: 100%;
+  /* Fill the available overlay height — combined with `flex: 1` on
+   * the moves section below, this makes the recent-moves log grow to
+   * absorb empty space and anchors the Back button at the very
+   * bottom regardless of how tall the window is. */
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ── Sidebar ────────────────────────────────────────────────────── */
+
+/* The sidebar has no individual border — the parent shell provides
+ * the outer chrome. But it DOES get its own parchment background
+ * tint so the left half reads as a distinct "box" from the white
+ * main pane on the right. The vertical divider line is the seam. */
+.dash-sidebar {
+  flex-shrink: 0;
+  width: 92px;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  background: #f0e8d2;
+  /* Pixel-art scrollbar so the strip doesn't look like a web-app
+   * frame next to the GBA-styled main pane. */
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.dash-sidebar::-webkit-scrollbar { width: 8px; }
+.dash-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.dash-sidebar::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 1px solid #1a1a1a;
+  border-radius: 0;
+  min-height: 24px;
+}
+
+/* (No explicit `.dash-divider` element — the sidebar's parchment
+ *  background against the main pane's white does the separation
+ *  visually. Matches the Octopus-style nav layout where colored
+ *  list tiles on a tinted rail naturally delimit the boundary.) */
+
+/* Main pane — content area to the right of the sidebar. White
+ * background to contrast against the sidebar's parchment so the
+ * two halves read as separate boxes. Owns its own internal padding
+ * so the title / sections aren't flush with the divider edge. */
+.dash-main {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  overflow: hidden;
+  background: #ffffff;
+}
+.dash-sidebar-loading {
+  color: #888;
+  font-size: 10px;
+  text-align: center;
+  padding: 12px 0;
+}
+
+/* Individual pet tile. Compact square sprite + name + level. The
+ * active pet gets a green dot top-right; the currently-selected tile
+ * (which can differ from active during inspection) gets the gold
+ * box-shadow + accent border. */
+.dash-sidebar-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 3px 5px;
+  background: #ffffff;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 8px;
+  color: #1a1a1a;
+  transition: transform 0.05s, box-shadow 0.05s;
+  box-shadow: 0 2px 0 #1a1a1a;
+}
+.dash-sidebar-tile:hover {
+  background: #fffbe8;
+}
+.dash-sidebar-tile:active:not(.is-selected) {
+  transform: translateY(2px);
+  box-shadow: 0 0 0 #1a1a1a;
+}
+.dash-sidebar-tile.is-selected {
+  background: #fff8c8;
+  border-color: #b8860b;
+  box-shadow:
+    inset 0 0 0 1px #ffc850,
+    0 2px 0 #b8860b;
+}
+
+.dash-sidebar-tile-sprite {
+  width: 56px;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f4;
+  border: 1px solid #d0d0d0;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dash-sidebar-tile-img {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  -webkit-user-drag: none;
+}
+/* SVG egg fallback — sized down to fit the sidebar slot. */
+.dash-sidebar-tile-sprite > .pet {
+  width: 56px !important;
+  height: 56px !important;
+  animation: none !important;
+}
+
+.dash-sidebar-tile-name {
+  width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: center;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+}
+.dash-sidebar-tile-lvl {
+  color: #b8860b;
+  font-variant-numeric: tabular-nums;
+  font-size: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* Green pip in the top-right corner marks the live "active companion"
+ * — distinct from the gold accent which marks the tile the user is
+ * currently inspecting. Both can coexist (active + selected). */
+.dash-sidebar-tile-dot {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 6px;
+  height: 6px;
+  background: #2e8b57;
+  border: 1px solid #1a1a1a;
+  border-radius: 50%;
+}
+
+/* ALL PETS sidebar tile — special row above the pet list. Carries
+ * the same border / shape as a regular tile so it sits in the same
+ * grid, but uses the stacked-squares glyph instead of a sprite to
+ * signal "aggregate, not a pet". */
+.dash-sidebar-tile-all {
+  /* slightly bolder dot/shadow so the tile reads as a primary action,
+   * not just another pet entry. */
+  border-color: #1a1a1a;
+}
+.dash-sidebar-tile-all-icon {
+  background: #faf7f0;
+}
+.dash-sidebar-tile-all .dash-sidebar-tile-name {
+  letter-spacing: 0.08em;
+}
+.dash-sidebar-tile-all .dash-sidebar-tile-lvl {
+  color: #555;
+  font-size: 7px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ALL PETS identity row — replaces the per-pet sprite + level + XP
+ * bar with a compact stat grid (Spend / Total XP / Tokens). No
+ * "next evolution" or stage info — those don't apply at library
+ * scope. */
+.dash-identity-all {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 3px solid #1a1a1a;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+.dash-identity-all-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  align-items: baseline;
+}
+.dash-identity-all-title {
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: #1a1a1a;
+}
+.dash-identity-all-sub {
+  font-size: 9px;
+  color: #777;
+  letter-spacing: 0.02em;
+}
+.dash-identity-all-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-identity-all-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  border: 2px solid #1a1a1a;
+  border-radius: 4px;
+  background: #f8f8f8;
+}
+.dash-identity-all-stat-label {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #888;
+}
+.dash-identity-all-stat-value {
+  font-size: 13px;
+  color: #1a1a1a;
+  letter-spacing: 0.02em;
+}
+.dash-identity-all-stat-cost {
+  color: #2e8b57;
+  font-weight: 700;
+}
+
+/* Pet-name column inside a moves-log row. Present only when the
+ * parent `.dash-log` carries `.dash-log-with-pet` (ALL PETS mode).
+ * Plain bold text — no chip background — so the eye reads four
+ * even columns: time · pet · delta · detail. */
+.dash-log-pet {
+  font-size: 9px;
+  color: #1a1a1a;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Drill-down variant — uses a single scrollable middle area instead
+ * of the overview's per-section flex layout. The overview has only
+ * one "grow" section (MOVES); the drill-down has three (MODELS, BY
+ * DAY, REQUESTS) which the original flex layout couldn't accommodate
+ * — they fought for height and overlapped. Solution: collapse all
+ * sections into one scroll container, pin title + Back bar at the
+ * edges. */
+.dash-box-detail {
+  gap: 0;
+}
+.dash-detail-title {
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+/* Drill-down body — a flex column. Each section has its OWN internal
+ * scroll where it makes sense, so the dialog stays compact in the
+ * normal case: you see all three sections at once and scroll *inside*
+ * a section to dig deeper. `overflow-y: auto` is a fallback for the
+ * extreme narrow-window case (where fixed sections + REQUESTS
+ * min-height exceed the dialog body) — never engages at normal sizes. */
+.dash-detail-scroll {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.dash-detail-scroll::-webkit-scrollbar { width: 10px; }
+.dash-detail-scroll::-webkit-scrollbar-track {
+  background: #ddd;
+  border-left: 2px solid #1a1a1a;
+}
+.dash-detail-scroll::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  min-height: 28px;
+}
+
+/* Drill-down sections share a card frame (dark title bar inside a
+ * bordered white card). Each section specialises its sizing below
+ * (MODELS = natural, BY DAY = natural, REQUESTS = flex-grow).
+ * Scoped to `.dash-detail-scroll >` so the overview's TYPES / MOVES
+ * sections are untouched. */
+.dash-detail-scroll > .dash-section {
+  border: 3px solid #1a1a1a;
+  background: #ffffff;
+  border-radius: 6px;
+  overflow: hidden;
+  gap: 0;
+  display: flex;
+  flex-direction: column;
+  /* Default: take only the height your content needs. The one
+   * exception (REQUESTS) overrides below. */
+  flex-shrink: 0;
+}
+.dash-detail-scroll > .dash-section > .dash-section-head {
+  background: #1a1a1a;
+  color: #f5f1e8;
+  padding: 7px 12px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  border-bottom: none;
+  flex-shrink: 0;
+}
+
+/* Table inside a card — drops the per-table border (card owns it),
+ * lays out as a column so the column-header pins above the row list. */
+.dash-detail-scroll > .dash-section > .dash-table {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 4px 4px 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.dash-detail-scroll > .dash-section > .dash-table > .dash-table-head {
+  color: #888;
+  border-bottom: 2px solid #1a1a1a;
+  flex-shrink: 0;
+}
+
+/* Generic scrollable row list. Each section that needs scrolling
+ * (MODELS when many models, REQUESTS during pagination) gets its
+ * own height policy below; the scrollbar styling is shared. */
+.dash-detail-scroll > .dash-section > .dash-table > .dash-table-rows {
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.dash-detail-scroll > .dash-section > .dash-table > .dash-table-rows::-webkit-scrollbar {
+  width: 10px;
+}
+.dash-detail-scroll > .dash-section > .dash-table > .dash-table-rows::-webkit-scrollbar-track {
+  background: #ddd;
+  border-left: 2px solid #1a1a1a;
+}
+.dash-detail-scroll > .dash-section > .dash-table > .dash-table-rows::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  min-height: 28px;
+}
+.dash-detail-scroll > .dash-section > .dash-table > .dash-loadmore {
+  flex-shrink: 0;
+}
+
+/* ── Per-section sizing ─────────────────────────────────────────
+ * Layout philosophy: the dialog body is FULLY FILLED — no empty
+ * space at the bottom. BY DAY is a fixed-height card (chart + axis
+ * + 3-region panel where the per-model region itself is fixed
+ * height — see `.dash-byday-models` below), so the BY DAY card
+ * never jumps as the user hovers different days. MODELS takes
+ * whatever vertical space the dialog has left, with its row list
+ * scrolling internally if there are too many models to fit.
+ *
+ * (REQUESTS is no longer a third section here — it moved to a
+ * dedicated popup view opened from the long "VIEW N REQUESTS →"
+ * button at the bottom of the dialog. See `.dash-requests-popup`.)
+ */
+.dash-detail-scroll > .dash-section-models {
+  /* Override the generic `flex-shrink: 0` from `.dash-section` —
+   * MODELS is the flexible region that absorbs leftover height. */
+  flex: 1 1 0;
+  min-height: 100px;
+}
+.dash-detail-scroll > .dash-section-models > .dash-table {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+.dash-detail-scroll > .dash-section-models > .dash-table > .dash-table-rows {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.dash-loading,
+.dash-empty {
+  text-align: center;
+  padding: 28px 12px;
+  color: #888;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+/* ─── Identity row ────────────────────────────────────────────── */
+
+.dash-identity {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  border: 3px solid #1a1a1a;
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 12px 14px;
+}
+
+.dash-sprite {
+  width: 84px;
+  height: 84px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f4f4f4;
+  border: 2px solid #d0d0d0;
+  border-radius: 4px;
+}
+.dash-sprite-img {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  -webkit-user-drag: none;
+}
+.dash-sprite-svg {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dash-sprite-svg > .pet {
+  /* override App.css's global .pet sizing (128px) — fit inside the
+   * card's 84px sprite slot. */
+  width: 84px !important;
+  height: 84px !important;
+  animation: none !important;
+}
+
+.dash-id-text {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dash-name-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 15px;
+}
+.dash-name {
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-lvl {
+  color: #b8860b;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.dash-stage {
+  font-size: 10px;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.dash-xp-bar {
+  position: relative;
+  height: 8px;
+  background: #ddd;
+  border: 2px solid #1a1a1a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.dash-xp-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(to bottom, #98c8f8, #2050a0);
+  transition: width 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.dash-xp-numbers {
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.dash-xp-numbers b {
+  color: #1a1a1a;
+}
+
+.dash-raised {
+  font-size: 9px;
+  color: #888;
+  letter-spacing: 0.04em;
+  margin-top: 2px;
+}
+
+/* ─── Section frame ───────────────────────────────────────────── */
+
+.dash-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  /* By default sections are content-sized. The moves section
+   * (`.dash-section-grow`) overrides this to grow into remaining
+   * space so the dashboard never has dead air at the bottom. */
+  min-height: 0;
+}
+
+/* Grow modifier — applied to the "Recent moves" section so it expands
+ * to fill whatever vertical space the identity + types rows leave
+ * behind. Without this, with few providers and short identity copy,
+ * the dialog had an awkward empty band above the Back button. */
+.dash-section-grow {
+  flex: 1 1 0;
+}
+
+.dash-section-head {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: #555;
+  padding: 0 4px;
+}
+
+/* Anchor the Back button to the bottom regardless of how much
+ * content sits above it. `margin-top: auto` in a flex column pushes
+ * the element to the end of the cross axis. */
+.dash-actions {
+  margin-top: auto;
+}
+
+/* Drill-down footer — no border-top divider. The long
+ * "VIEW N REQUESTS →" button above already provides a clear
+ * separator between the scroll content and the Back action. */
+.dash-actions-detail {
+  flex-shrink: 0;
+  padding-top: 8px;
+  margin-top: 4px;
+  background: transparent;
+}
+
+/* Long full-width call-to-action that opens the dedicated REQUESTS
+ * popup. Visually distinct (dark, primary) so it reads as the
+ * "drill deeper" affordance, but not so loud that it competes with
+ * the Back button below it. */
+.dash-view-requests-btn {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: #1a1a1a;
+  color: #f5f1e8;
+  border: 3px solid #1a1a1a;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 #d8d8d8;
+  transition: transform 0.05s, box-shadow 0.05s;
+}
+.dash-view-requests-btn:hover {
+  background: #2a2a2a;
+}
+.dash-view-requests-btn:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0 0 0 #d8d8d8;
+}
+.dash-view-requests-btn:disabled {
+  background: #888;
+  border-color: #888;
+  color: #ddd;
+  cursor: default;
+  box-shadow: none;
+  transform: none;
+}
+.dash-view-requests-btn-label {
+  flex: 1 1 auto;
+  text-align: left;
+}
+.dash-view-requests-btn-arrow {
+  font-size: 14px;
+  letter-spacing: 0;
+  margin-left: 12px;
+  color: #b8860b;
+}
+.dash-view-requests-btn:disabled .dash-view-requests-btn-arrow {
+  color: #ccc;
+}
+
+/* Requests popup body — single bordered card filling the dialog body,
+ * containing the paginated request list. Mirrors the drill-down card
+ * styling but with no extra section frames (the popup IS the
+ * card). */
+.dash-requests-popup {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+}
+.dash-requests-popup-meta {
+  font-size: 9px;
+  color: #777;
+  letter-spacing: 0.04em;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+/* The popup's table takes the rest of the dialog body and scrolls
+ * its row list internally. Same flex chain as the in-detail REQUESTS
+ * section used before. */
+.dash-requests-popup > .dash-table {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border: 3px solid #1a1a1a;
+  background: #fff;
+  border-radius: 6px;
+  padding: 4px 4px 0;
+}
+.dash-requests-popup > .dash-table > .dash-table-head {
+  flex-shrink: 0;
+}
+.dash-requests-popup > .dash-table > .dash-table-rows {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.dash-requests-popup > .dash-table > .dash-table-rows::-webkit-scrollbar {
+  width: 10px;
+}
+.dash-requests-popup > .dash-table > .dash-table-rows::-webkit-scrollbar-track {
+  background: #ddd;
+  border-left: 2px solid #1a1a1a;
+}
+.dash-requests-popup > .dash-table > .dash-table-rows::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  min-height: 28px;
+}
+.dash-requests-popup > .dash-table > .dash-loadmore {
+  flex-shrink: 0;
+}
+
+/* ─── Types (provider chips) ─────────────────────────────────── */
+
+/* Auto-fit grid: chips expand to fill rows and wrap to new lines
+ * when there's not enough horizontal room. `minmax(180px, 1fr)`
+ * means each chip is at least 180px (enough to keep numbers on one
+ * line at our font size), at most one column's share of the row.
+ * If the user has 4+ providers, they wrap to a second row — types
+ * section grows taller, moves section absorbs the rest. */
+.dash-chips {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.dash-chip {
+  padding: 10px 12px;
+  background: #ffffff;
+  border: 3px solid #1a1a1a;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /* Defensive: even with the JS compact formatter, an absurdly large
+   * number (multi-trillion) plus a long stage / model name on the
+   * detail line could push the chip width. Hide overflow + truncate
+   * children with ellipsis is the last line of defence. */
+  min-width: 0;
+  overflow: hidden;
+  /* Reset native button styles when the chip element is rendered as
+   * <button> (clickable provider chips). */
+  font-family: inherit;
+  text-align: left;
+  color: inherit;
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #ececec,
+    0 3px 0 #1a1a1a;
+}
+/* Clickable variant — used for the per-provider chips in the
+ * overview. Adds an obvious affordance (cursor + hover lift) so users
+ * realise the chip is interactive. */
+.dash-chip-clickable {
+  cursor: pointer;
+  transition: transform 0.06s ease, background 0.12s ease;
+}
+.dash-chip-clickable:hover {
+  background: #fff8c8;
+}
+.dash-chip-clickable:active {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 0 0 2px #ffffff,
+    inset 0 0 0 5px #ececec,
+    0 0 0 #1a1a1a;
+}
+.dash-chip-label {
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Stacked stat lines — each metric on its own row with an explicit
+ * label, replacing the prior `120k tok +18k XP` cram. The label
+ * shrinks first if space is tight; the numeric value keeps its full
+ * width (truncated via ellipsis as a last-ditch fallback). The
+ * mouseover `title` attribute on the value carries the exact integer
+ * so users can always see the precise number. */
+.dash-chip-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  min-width: 0;
+}
+.dash-chip-stat-label {
+  color: #777;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  /* Shrink first — the value is what the user cares about. */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-chip-stat-value {
+  color: #1a1a1a;
+  font-weight: 700;
+  white-space: nowrap;
+  /* Take whatever the label leaves behind, right-aligned. */
+  flex: 0 0 auto;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+.dash-chip-stat-value-xp {
+  color: #b8860b;
+}
+
+.dash-chip-hint {
+  font-size: 8px;
+  color: #888;
+  letter-spacing: 0.04em;
+  /* Allow the hint to wrap onto a second (or third) line. Earlier
+   * `nowrap` + ellipsis was hiding details like the "cache" segment
+   * of the in/out/cache breakdown and the "manual grants" tail of the
+   * Interactions chip whenever the chip was at its narrow 180-px
+   * floor. With wrap allowed, narrow chips just get a slightly taller
+   * row and the grid stretches the other chips in that row to match.
+   * `line-height` keeps a wrapped two-line hint readable without
+   * crowding the lines together. */
+  line-height: 1.5;
+  word-spacing: 0.02em;
+}
+
+/* Provider-specific type-chip accents — Pokémon "Fire", "Electric",
+ * "Grass" coding. Adds a tint band on the left edge to differentiate
+ * at a glance. */
+.dash-chip-claude_code,
+.dash-chip-claude {
+  border-left-width: 6px;
+  border-left-color: #d97706;
+}
+.dash-chip-codex {
+  border-left-width: 6px;
+  border-left-color: #2563eb;
+}
+.dash-chip-opencode {
+  border-left-width: 6px;
+  border-left-color: #16a34a;
+}
+.dash-chip-gemini {
+  border-left-width: 6px;
+  border-left-color: #9333ea;
+}
+.dash-chip-other {
+  border-left-width: 6px;
+  border-left-color: #6b7280;
+}
+
+/* ─── Recent moves (battle-log scroll) ───────────────────────── */
+
+.dash-log {
+  border: 3px solid #1a1a1a;
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px 4px;
+  /* Fill the parent section's height — the section itself grows via
+   * `.dash-section-grow` so the log expands to absorb whatever space
+   * is left under the identity + types rows. min-height keeps it
+   * usable even on a short window. */
+  flex: 1 1 0;
+  min-height: 140px;
+  overflow-y: auto;
+  font-size: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.dash-log::-webkit-scrollbar { width: 12px; }
+.dash-log::-webkit-scrollbar-track {
+  background: #ddd;
+  border-left: 2px solid #1a1a1a;
+}
+.dash-log::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 2px solid #1a1a1a;
+  border-radius: 0;
+  min-height: 36px;
+}
+
+.dash-log-row {
+  display: grid;
+  grid-template-columns: 60px 80px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  padding: 4px 10px;
+  font-variant-numeric: tabular-nums;
+  color: #1a1a1a;
+  border-bottom: 1px solid #f0f0f0;
+}
+.dash-log-row:last-child {
+  border-bottom: none;
+}
+
+/* ALL PETS variant — adds the pet-name column between time and
+ * delta, so the eye reads "WHEN · WHO · HOW MUCH · WHAT" left to
+ * right. Pet name caps at 90 px to keep delta + detail readable;
+ * over-long names ellipsis cleanly. The base `.dash-log-row` grid
+ * is overridden via the more-specific `.dash-log-with-pet >` chain. */
+.dash-log-with-pet .dash-log-row {
+  grid-template-columns: 50px 90px 70px 1fr;
+}
+/* Subtle zebra striping in ALL mode so it's easier to track which
+ * row belongs to which pet when names wrap or repeat — purely a
+ * visual aid since the names are pretty similar widths. */
+.dash-log-with-pet .dash-log-row:nth-child(even) {
+  background: #fafafa;
+}
+.dash-log-time {
+  color: #888;
+  font-size: 9px;
+}
+.dash-log-delta {
+  color: #b8860b;
+  font-weight: 700;
+  font-size: 10px;
+  /* Belt-and-suspenders: even if a value like `+1,234,567` somehow
+   * appears in the delta cell, it stays on a single line and the
+   * cell ellipses rather than wrapping into a second row. The 80 px
+   * grid column comfortably fits up to ~6 chars in Press Start 2P
+   * 10 px (e.g. `+9,999` or `+99.9k`); larger values truncate with
+   * `…`, with the tooltip showing the full number. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-log-delta.neg {
+  color: #b91c1c;
+}
+.dash-log-detail {
+  color: #555;
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Drill-down (per-provider detail view) ───────────────────── */
+
+/* Summary strip above the models table — same chip-stat structure,
+ * just laid out side-by-side instead of nested in a card. */
+.dash-detail-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border: 3px solid #1a1a1a;
+  border-radius: 6px;
+  background: #ffffff;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+.dash-detail-stat {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-variant-numeric: tabular-nums;
+}
+
+/* One-line note explaining the In / Cache / Out / Total split. Placed
+ * just above the MODELS table so users notice the small "In" column
+ * isn't a data bug — it's Claude's prompt-caching split (cache reads
+ * land in the Cache column, not In). */
+.dash-detail-note {
+  font-size: 9px;
+  color: #777;
+  line-height: 1.6;
+  padding: 0 4px;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+/* Generic table for MODELS and REQUESTS. Uses CSS grid so columns
+ * align across rows; defensive ellipsis on every text cell. */
+.dash-table {
+  border: 3px solid #1a1a1a;
+  background: #fff;
+  border-radius: 6px;
+  padding: 6px 4px;
+  font-size: 9px;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.dash-table-head {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr;
+  gap: 8px;
+  padding: 4px 10px;
+  color: #888;
+  letter-spacing: 0.08em;
+  font-size: 8px;
+  text-transform: uppercase;
+  border-bottom: 2px solid #1a1a1a;
+}
+.dash-table-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr;
+  gap: 8px;
+  padding: 5px 10px;
+  font-variant-numeric: tabular-nums;
+  color: #1a1a1a;
+  border-bottom: 1px solid #f0f0f0;
+  align-items: baseline;
+}
+.dash-table-row:last-child {
+  border-bottom: none;
+}
+.dash-table-row .ralign,
+.dash-table-head .ralign {
+  text-align: right;
+}
+.dash-cell-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: ui-monospace, "SF Mono", monospace;
+  font-size: 9px;
+}
+.dash-cell-total {
+  color: #b8860b;
+  font-weight: 700;
+}
+
+/* Requests table — same column structure as MODELS but with the
+ * "Requests count" column replaced by a "Time" column at the start.
+ * Since the drill-down now uses a single page-level scroll
+ * (`.dash-detail-scroll`), the per-table internal scroll is gone —
+ * the rows just render at natural height and the page scrolls.
+ * Sticky day headers inside still work because they latch onto the
+ * page scroll container. */
+.dash-table-requests {
+  display: flex;
+  flex-direction: column;
+}
+.dash-table-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.dash-request-row {
+  /* 7 columns now (added Cost): Time | Model | Input | Output | Cached% |
+   * Total | Cost. Time is HH:MM only (5 chars) — the date moved to a
+   * sticky group header above, so 58px is plenty (~9-10px per glyph in
+   * Press Start 2P at 9px). */
+  grid-template-columns: 58px 1.2fr 0.6fr 0.6fr 0.6fr 0.8fr 0.7fr;
+  font-size: 9px;
+  padding: 4px 10px;
+}
+.dash-cell-time {
+  color: #888;
+  font-size: 9px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* MODELS table — 7 columns (added Cost): Model | Requests | Input |
+ * Output | Cached% | Total | Cost. Overrides the 6-col `.dash-table-row`
+ * default. The `.dash-table-head.dash-model-row` selector wins by
+ * specificity over `.dash-table-head` alone. */
+.dash-model-row {
+  grid-template-columns: 1.2fr 0.7fr 0.7fr 0.7fr 0.7fr 0.9fr 0.8fr;
+}
+
+/* BY DAY — SVG bar chart + three-region detail panel modelled on
+ * CodexBar's "click a day, see breakdown" pattern. Replaced the
+ * original tabular BY DAY since one chart-glance + structured
+ * breakdown beats reading 30 rows. */
+.dash-byday-chart {
+  padding: 10px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 auto;
+}
+.dash-byday-chart-svg {
+  width: 100%;
+  height: 64px;
+  display: block;
+  /* Crisp pixel-art rendering — disables anti-aliasing on bar edges
+   * so they match the dashboard's pixel aesthetic. */
+  shape-rendering: crispEdges;
+}
+.dash-byday-bar {
+  fill: #2e8b57;
+  cursor: pointer;
+  transition: fill 0.08s;
+}
+/* Focused bar = explicitly hovered, OR the most-recent-active day
+ * by default. Gold highlight gives the "you are here" / "currently
+ * inspecting" cue without needing a separate hover-only state. */
+.dash-byday-bar.is-focus {
+  fill: #b8860b;
+}
+/* Empty-day baseline ticks — light gray so they're visible as a
+ * "calendar continues" hint without looking like real data. */
+.dash-byday-bar.is-empty {
+  fill: #d8d8d8;
+  cursor: default;
+}
+.dash-byday-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: #888;
+  letter-spacing: 0.06em;
+  font-family: ui-monospace, "SF Mono", monospace;
+}
+
+/* Three-region detail panel below the chart. The panel always
+ * shows SOMETHING (default = most recent active day) so the chart
+ * is informative at rest. Region 1: selected-day header. Region 2:
+ * per-model breakdown. Region 3: 30-day total. */
+.dash-byday-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  border-top: 1px solid #ddd;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Region 1 — selected day header. Bold date + cost, lighter tokens. */
+.dash-byday-day-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  align-items: baseline;
+  font-size: 10px;
+  color: #1a1a1a;
+}
+.dash-byday-day-date {
+  font-weight: 700;
+}
+.dash-byday-day-cost {
+  color: #2e8b57;
+  font-weight: 700;
+}
+
+/* Region 2 — per-model breakdown. One row per model used that day.
+ * Vertical bar indicator on the left echoes the chart's bar style,
+ * tying the rows visually to the chart above.
+ *
+ * FIXED height (not max-height): the BY DAY card must stay the
+ * same total height regardless of how many models the focused day
+ * used. Otherwise hovering across days makes the card jump up and
+ * down — disorienting. Day with 1 model = blank space below;
+ * day with 3+ models = internal scroll. Empty placeholder gets the
+ * same fixed height so switching to a no-activity day doesn't
+ * collapse the panel either. */
+.dash-byday-models,
+.dash-byday-models-empty {
+  height: 64px;
+  flex-shrink: 0;
+}
+.dash-byday-models {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #888 #ddd;
+}
+.dash-byday-models::-webkit-scrollbar {
+  width: 8px;
+}
+.dash-byday-models::-webkit-scrollbar-track {
+  background: #ddd;
+}
+.dash-byday-models::-webkit-scrollbar-thumb {
+  background: #888;
+  border: 1px solid #1a1a1a;
+}
+.dash-byday-models-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #888;
+}
+.dash-byday-model {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 24px;
+}
+.dash-byday-model-bar {
+  width: 3px;
+  background: #2e8b57;
+  flex-shrink: 0;
+  border-radius: 1px;
+}
+.dash-byday-model-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+.dash-byday-model-name {
+  font-size: 9px;
+  font-weight: 700;
+  color: #1a1a1a;
+  font-family: ui-monospace, "SF Mono", monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.dash-byday-model-stats {
+  font-size: 9px;
+  color: #777;
+  display: flex;
+  gap: 4px;
+  align-items: baseline;
+}
+.dash-byday-model-cost {
+  color: #2e8b57;
+  font-weight: 700;
+}
+
+/* Region 3 — 30-day total. Lighter prefix label, bold cost value.
+ * Top border separates from per-model rows above. */
+.dash-byday-total {
+  padding-top: 5px;
+  border-top: 1px solid #ddd;
+  font-size: 9px;
+  color: #555;
+  letter-spacing: 0.02em;
+}
+.dash-byday-total-cost {
+  color: #2e8b57;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+/* Shared separator dot — light grey so it sits between values
+ * without competing. Used in both the day header and per-model
+ * stat lines. */
+.dash-byday-sep {
+  color: #bbb;
+}
+
+.dash-byday-empty {
+  padding: 20px 12px;
+  text-align: center;
+  color: #888;
+  font-size: 9px;
+}
+
+/* Highlight cost cells — same accent as `.dash-cell-total` uses for
+ * the token total, distinguishing the cost (green) from the
+ * token total (gold). */
+.dash-cell-cost {
+  color: #2e8b57;
+  font-weight: 700;
+  white-space: nowrap;
+}
+/* Faint subscript on the BY DAY "top model" cell — the share % + "+N"
+ * tag for any other models that day. */
+.dash-cell-sub {
+  color: #888;
+  font-size: 8px;
+  margin-left: 4px;
+}
+
+/* Summary stat — cost value styled distinct from the token count so
+ * the dollar number reads at a glance. */
+.dash-chip-stat-value-cost {
+  color: #2e8b57;
+}
+
+/* Day-group separator inside REQUESTS — plain inline divider with the
+ * date on the left and the day's total on the right. Not sticky:
+ * with the new single-page-scroll layout, multiple sticky bars (one
+ * per group + the column header) would z-fight each other. A plain
+ * separator reads cleanly when scrolled and is consistent with the
+ * non-sticky section headers above. */
+.dash-day-header {
+  background: #f0ebde;
+  border-top: 2px solid #1a1a1a;
+  border-bottom: 1px solid #1a1a1a;
+  padding: 5px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 9px;
+  font-weight: 700;
+  color: #1a1a1a;
+  letter-spacing: 0.04em;
+}
+/* First day-group inside the rows container — no double top border
+ * since the table head already provides one. */
+.dash-table-rows > div:first-child > .dash-day-header {
+  border-top: none;
+}
+.dash-day-header-sub {
+  color: #2e8b57;
+  font-weight: 700;
+  font-size: 8px;
+}
+
+/* Load-more footer — a quiet textual control, NOT a chunky GBA
+ * button. Two large pixel-art buttons (this + the primary Back at
+ * the dialog footer) competed visually and made the layout feel
+ * cluttered; a small underlined text link reads as "pagination
+ * affordance" without stealing focus from Back. */
+.dash-loadmore {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 8px 0 6px;
+  margin-top: 2px;
+}
+.dash-loadmore-link {
+  background: none;
+  border: none;
+  color: #b8860b;
+  font-family: inherit;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.dash-loadmore-link:hover:not(:disabled) {
+  color: #1a1a1a;
+}
+.dash-loadmore-link:disabled {
+  color: #888;
+  cursor: default;
+  text-decoration: none;
+}
+.dash-loadmore-end {
+  color: #888;
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}

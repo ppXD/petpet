@@ -1,0 +1,116 @@
+@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
+
+/* Note: rules on html / body must not set `pointer-events: none` here.
+ * All view-CSS files are imported by App.tsx (via `import "./..."`)
+ * and Vite bundles them into one stylesheet that loads in every Tauri
+ * window — including the menu window — so a global rule on html would
+ * make the menu's buttons un-clickable. Transparent click-through on
+ * the info window is already handled at the OS level (macOS NSWindow
+ * with `transparent: true` ignores 0-alpha pixels). */
+html, body, #root {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+*, *::before, *::after { box-sizing: border-box; }
+
+.info-panel {
+  /* Inline-block so the panel shrinks to fit its content along both
+   * axes. The Tauri window sizes itself to match (see InfoView.tsx
+   * useLayoutEffect) so the bubble is always exactly as wide / tall
+   * as the strings it shows. */
+  display: inline-flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 6px;
+  padding: 7px 11px;
+  background: rgba(15, 23, 42, 0.78);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 6px;
+  font-family: "Press Start 2P", ui-monospace, "SF Mono", monospace;
+  color: #f1f5f9;
+  /* Hard cap so a runaway long stage name wraps to two lines instead
+   * of stretching the window past the visible screen. */
+  max-width: 320px;
+  width: max-content;
+  animation: info-pop 0.16s ease-out;
+  pointer-events: auto;
+}
+
+/* Header (name · level) and XP row stay on one line — they're short
+ * enough that wrapping would just look bad. Only the foot row (stage
+ * label + next-evolution hint) is allowed to wrap. */
+.info-head,
+.info-xp-row {
+  white-space: nowrap;
+}
+.info-foot {
+  white-space: normal;
+  word-break: break-word;
+}
+
+@keyframes info-pop {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.info-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.info-head { font-size: 10px; }
+.info-name { color: #f1f5f9; letter-spacing: 0.04em; }
+.info-lvl  {
+  color: #fde047;
+  font-variant-numeric: tabular-nums;
+}
+
+.info-xp-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.info-xp-bar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 5px;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.info-xp-bar-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: linear-gradient(to bottom, #7eb0e8, #2050a0);
+  transition: width 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+  border-radius: 2px;
+}
+.info-xp-numbers {
+  font-size: 7px;
+  color: #cbd5e1;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.info-foot {
+  font-size: 7px;
+  color: #94a3b8;
+}
+.info-stage {
+  color: #cbd5e1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.info-next {
+  color: #8d9cb8;
+  letter-spacing: 0.03em;
+}
+.info-next b {
+  color: #fde047;
+  font-weight: normal;
+}

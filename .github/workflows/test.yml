@@ -1,0 +1,89 @@
+# Cross-platform test matrix.
+#
+# Runs the lib unit tests AND the hook E2E integration tests on every
+# OS we ship to. The E2E suite spawns the real axum HookServer, builds
+# the curl hook command via `build_curl_command`, and executes it
+# through the local OS shell (`/bin/sh -c` on Unix, `cmd /c` on
+# Windows). If the cross-platform format ever regresses — single quotes
+# come back, `#` shell-comment marker creeps in, URL stops being
+# quoted — the Windows job fails loudly. macOS / Ubuntu cover the same
+# format under POSIX shells.
+#
+# Cost optimisations:
+#  - Single Rust toolchain (stable), no MSRV matrix here — desktop
+#    petpet pins its own toolchain via rust-toolchain.toml if needed.
+#  - `Swatinem/rust-cache` reuses the target/ cache across runs.
+#  - `--locked` so a dependency-tree shift can't slip past review.
+
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache target/
+        uses: Swatinem/rust-cache@v2
+        with:
+          # `desktop/src-tauri` is the workspace's second member — keep
+          # its target/ in the same cache key so the Tauri build artefacts
+          # don't get evicted between OS runs.
+          workspaces: ". -> target"
+
+      # L1 unit tests — fast, no I/O. Includes:
+      #   - paths.rs candidate-probing logic, ordering, no-duplicates
+      #     invariants, plus the Windows-gated test that asserts
+      #     %APPDATA% candidates (only fires on windows-latest)
+      #   - hooks/install/mod.rs build_curl_command format invariants
+      #   - hooks/install/util.rs marker detection + port extraction
+      #     for both the legacy `#` form and the new URL-query form
+      #   - per-provider install / uninstall logic
+      - name: L1 — Unit tests
+        run: cargo test --lib --locked
+
+      # L2 HTTP integration — spins up the real axum HookServer and
+      # talks to it via reqwest. No shell. Catches routing / parsing /
+      # concurrency / 404 / malformed-body regressions cheaply.
+      - name: L2 — HookServer HTTP integration
+        run: cargo test --test hook_server --locked
+
+      # L2 archive compat — pack / unpack / cross-version backward +
+      # forward compatibility for `.petpet`. Pins the format-evolution
+      # contract (additive minor, refuse newer major, ignore unknown
+      # fields, self-heal corrupt JSONL lines) so a user's
+      # long-raised companion never becomes un-importable.
+      - name: L2 — Archive format compat
+        run: cargo test --test archive_compat --locked
+
+      # L3 Shell E2E — invokes the local OS shell (`/bin/sh` on Unix,
+      # `cmd.exe` on Windows) to execute the actual `build_curl_command`
+      # output. THIS is the test that proves the cross-platform string
+      # format parses correctly under `cmd.exe` on the Windows runner.
+      - name: L3 — Shell end-to-end
+        run: cargo test --test hook_shell_e2e --locked
+
+      # Cross-compile sanity for the desktop crate — catches Tauri /
+      # objc2-app-kit cfg-gated breakage that lib tests can't see.
+      # Only the macOS runner needs this since the macos-only objc2
+      # code is conditional on `target_os = "macos"`.
+      - name: Build desktop crate (macOS only)
+        if: matrix.os == 'macos-latest'
+        run: cargo build -p petpet-desktop --locked

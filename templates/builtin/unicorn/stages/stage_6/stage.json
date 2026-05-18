@@ -1,0 +1,10 @@
+{
+  "id": "stage_6",
+  "name": "Stage 6",
+  "flavor": "Skilled.",
+  "trigger": {
+    "metric": "level",
+    "value": 55
+  },
+  "attributes": {}
+}

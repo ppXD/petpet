@@ -1,0 +1,64 @@
+[workspace]
+members = [".", "desktop/src-tauri"]
+resolver = "2"
+
+[package]
+name = "petpet"
+version = "0.1.0"
+edition = "2021"
+description = "Desktop pet that ingests events from multiple AI coding agents"
+license = "MIT"
+
+[[bin]]
+name = "petpet"
+path = "src/main.rs"
+
+[lib]
+name = "petpet"
+path = "src/lib.rs"
+
+[dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread", "sync", "fs", "io-util", "signal", "time", "net"] }
+tokio-util = { version = "0.7", features = ["rt"] }
+axum = { version = "0.7", default-features = false, features = ["http1", "json", "tokio"] }
+toml_edit = "0.22"
+async-trait = "0.1"
+notify = "6"
+notify-debouncer-full = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "v5", "serde"] }
+anyhow = "1"
+thiserror = "1"
+glob = "0.3"
+dirs = "5"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+clap = { version = "4", features = ["derive"] }
+futures = "0.3"
+include_dir = "0.7"
+# Archive pack/unpack for the `.petpet` template/pet file format.
+# Default features include deflate; we strip the unused ones (bzip2,
+# zstd, lzma) to keep the binary lean — petpet archives only ever use
+# deflate (the universal browser-supported codec).
+zip = { version = "2", default-features = false, features = ["deflate"] }
+
+[dev-dependencies]
+tempfile = "3"
+pretty_assertions = "1"
+# E2E hook test (tests/hooks_e2e.rs) drives the real `HookServer` via
+# the local OS shell. Needs a small HTTP client for the readiness
+# probe; rustls-tls keeps the test off platform-specific TLS stacks
+# (OpenSSL / Schannel) so it builds cleanly on every CI runner.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+
+[profile.release]
+opt-level = "z"        # optimise for size (vs "3" for speed)
+lto = "fat"            # cross-crate inlining + dead code elim
+codegen-units = 1      # 1 unit → strictest LTO
+strip = "symbols"      # drop debug symbols + symbol table
+panic = "abort"        # no unwinding tables (-5..10%); pet doesn't catch panics
+incremental = false
+overflow-checks = false
