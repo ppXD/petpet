@@ -29,9 +29,12 @@ use std::sync::Arc;
 
 use petpet::db::DbHandle;
 use petpet::event::{ProviderId, TokenDelta};
+use petpet::model::{ModelIdent, Tier};
 use petpet::template::registry::TemplateRegistry;
-use petpet::xp::pricing;
 use petpet::xp::cost_query;
+use petpet::xp::heuristic::{fallback_tier, FallbackResult};
+use petpet::xp::pricing;
+use petpet::xp::registry::Registry;
 use petpet::xp::XPEngine;
 use serde::Serialize;
 use tauri::State;
@@ -449,6 +452,155 @@ pub async fn dashboard_provider_requests_page(
         .map(|r| price_request_row(&provider, r))
         .collect();
     Ok(ProviderRequestsPage { requests, has_more })
+}
+
+// ─── Recently identified models ──────────────────────────────────
+
+/// One row for the "Models in this pet's history" panel.
+///
+/// Surfaces every distinct (provider, model) pair the pet has logged,
+/// annotated with the same classification the scorer uses:
+///
+/// - `tier`       = the tier resolved by `Registry` → `model.rs` fallback
+/// - `confidence` = `exact` when Registry recognised it, `heuristic` when
+///                  the name's keywords gave a tier signal, `unknown`
+///                  when nothing matched (still emits XP at 0.4×)
+/// - `in_registry`= whether `data/models.json` carried an explicit entry
+///
+/// The frontend uses `tier` to pick a chip colour and `confidence`
+/// to decide whether to overlay a yellow "guessed" badge.
+#[derive(Serialize)]
+pub struct RecentModelRow {
+    pub provider: String,
+    /// The string as it was recorded in `usage_event` (raw, not
+    /// normalized). Frontend displays this verbatim so users see the
+    /// model id they recognise.
+    pub model: String,
+    /// Canonical normalized form after `ModelIdent::parse` — dots
+    /// collapsed to dashes, vendor prefix stripped, date suffix removed.
+    /// Useful for stable React `key`s.
+    pub model_normalized: String,
+    pub vendor: String,
+    pub family: String,
+    /// `frontier` / `mid` / `mini` / `unknown` (lowercase, matches
+    /// `Tier::as_str()`).
+    pub tier: String,
+    /// `exact` / `heuristic` / `unknown`. See struct doc.
+    pub confidence: String,
+    pub in_registry: bool,
+    /// `vendor-official` / `third-party-host` / `back-derived` / `convention`
+    /// when in registry; `None` otherwise. Lets the UI explain provenance.
+    pub registry_source: Option<String>,
+    pub events: u64,
+    pub tokens_total: u64,
+    /// All-time spend for this (provider, model). 0 for unpriced
+    /// models — same fallback the rest of the dashboard uses.
+    pub cost_usd: f64,
+}
+
+/// Recently-seen models for a pet (or library-wide), classified the
+/// same way the scorer classifies them. Drives the dashboard's
+/// "Models" panel so users can see which models the pet recognises
+/// (Exact, green) versus which it's guessing about (Heuristic, yellow),
+/// versus which it couldn't classify at all (Unknown).
+///
+/// Ordered by tokens_total DESC — most-used model first. Limit caps
+/// the result so a verbose pet with 50+ historical models doesn't
+/// dump the entire list on first paint.
+#[tauri::command]
+pub async fn recent_models(
+    state: State<'_, AppState>,
+    pet_id: Option<String>,
+    limit: Option<usize>,
+) -> Result<Vec<RecentModelRow>, String> {
+    let cap = limit.unwrap_or(20).clamp(1, 200);
+    build_recent_models(&state.db, &state.xp, pet_id.as_deref(), cap)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+async fn build_recent_models(
+    db: &Arc<DbHandle>,
+    xp: &Arc<XPEngine>,
+    pet_id: Option<&str>,
+    limit: usize,
+) -> anyhow::Result<Vec<RecentModelRow>> {
+    // ALL PETS scope: aggregate across the library. The pet-scoped
+    // `stats_summary_for_pet` joins through xp_event for accuracy.
+    let stats = if pet_id == Some(ALL_PETS_SCOPE) {
+        db.stats_summary().await?
+    } else {
+        let resolved_pet_id = match pet_id {
+            Some(id) => Some(id.to_string()),
+            None => xp.snapshot().await?.pet.map(|p| p.id),
+        };
+        match resolved_pet_id {
+            Some(id) => db.stats_summary_for_pet(&id).await?,
+            None => Vec::new(),
+        }
+    };
+
+    let mut rows: Vec<RecentModelRow> = stats.into_iter().map(classify_stats_row).collect();
+    // Sort by tokens_total DESC so the most-used model leads. Stable
+    // tiebreaker on event count keeps the order deterministic across
+    // refreshes.
+    rows.sort_by(|a, b| {
+        b.tokens_total
+            .cmp(&a.tokens_total)
+            .then_with(|| b.events.cmp(&a.events))
+    });
+    rows.truncate(limit);
+    Ok(rows)
+}
+
+/// Convert a raw stats row into a classified registry-aware row.
+/// This is the single place that mirrors the scorer's classification
+/// logic, so the UI always shows the same `(tier, confidence)` the
+/// algorithm would apply to the next event for this model.
+fn classify_stats_row(s: petpet::db::StatsRow) -> RecentModelRow {
+    let ident = ModelIdent::parse(&s.model);
+    let registry_hit = Registry::bundled().lookup(&s.model);
+
+    // (Tier, Confidence) — identical decision tree to `scorer::usage::classify`.
+    let (tier, confidence) = if ident.tier != Tier::Unknown {
+        (ident.tier, "exact")
+    } else {
+        match fallback_tier(&ident.model) {
+            FallbackResult::Confident(t) => (t, "heuristic"),
+            FallbackResult::Default => (Tier::Mid, "unknown"),
+        }
+    };
+
+    let tokens = TokenDelta {
+        input: s.input,
+        output: s.output,
+        cache_read: s.cache_read,
+        cache_creation: s.cache_creation,
+        reasoning: s.reasoning,
+    };
+    let provider_id = provider_id_for_pricing(&s.provider);
+    let cost_usd = pricing::compute_cost_usd(provider_id, &s.model, &tokens);
+    let tokens_total = s.input + s.output + s.cache_read + s.cache_creation + s.reasoning;
+
+    let (in_registry, registry_source) = match registry_hit.as_ref() {
+        Some(entry) => (true, Some(entry.source.source_type.to_string())),
+        None => (false, None),
+    };
+
+    RecentModelRow {
+        provider: s.provider,
+        model: s.model,
+        model_normalized: ident.model,
+        vendor: ident.vendor.as_str().to_string(),
+        family: ident.family,
+        tier: tier.as_str().to_string(),
+        confidence: confidence.to_string(),
+        in_registry,
+        registry_source,
+        events: s.events,
+        tokens_total,
+        cost_usd,
+    }
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────
