@@ -66,10 +66,27 @@ const MINI_PHRASES: &[&str] = &["flash-lite", "8b-instruct"];
 const MINI_SIZE_TAGS: &[&str] = &["8b", "7b", "3b", "1-5b", "1b", "0-5b"];
 
 /// Frontier-tier signals — flagship / largest / hardest-reasoning.
+/// Single dash-segment matches.
 const FRONTIER_KEYWORDS: &[&str] = &[
     "opus", "ultra", "max", "frontier", "pro",
     // OpenAI o-series reasoning flagships
     "o1", "o3", "o4", "o5",
+    // DeepSeek's dedicated reasoning model line
+    "reasoner",
+];
+
+/// Multi-token phrases that signal Frontier — required when the
+/// model family name doesn't fit a single dash-segment. Examples:
+/// `gpt-5` (vs Mini-keyword `nano` / `mini` that would override),
+/// `grok-4` / `grok-5` (xAI frontier lines).
+///
+/// Order: these are tested AFTER `MINI_*` so e.g. `gpt-5-nano` still
+/// resolves to Mini (the user opted into the smaller variant).
+const FRONTIER_PHRASES: &[&str] = &[
+    // GPT-5 family (gpt-5-mini / gpt-5-nano caught by MINI first)
+    "gpt-5", "gpt-6", "gpt-7",
+    // xAI Grok flagship line (grok-2 stays unmarked → Default → Mid)
+    "grok-4", "grok-5", "grok-6",
 ];
 
 /// Parameter-size tags signalling Frontier. ≥70B parameters.
@@ -102,6 +119,13 @@ pub fn fallback_tier(name: &str) -> FallbackResult {
     // Mini size tags as segments
     if segs.iter().any(|s| MINI_SIZE_TAGS.contains(s)) {
         return FallbackResult::Confident(Tier::Mini);
+    }
+
+    // Frontier phrases (multi-segment substring) — catches gpt-5 /
+    // grok-4 etc. where the version digit can't be matched as a
+    // single segment.
+    if FRONTIER_PHRASES.iter().any(|p| name.contains(p)) {
+        return FallbackResult::Confident(Tier::Frontier);
     }
 
     // Frontier keywords as segments
@@ -256,6 +280,69 @@ mod tests {
         // so `gemini` stays Default → caller treats as Mid.
         assert_eq!(fallback_tier("gemini-9-pro"), FallbackResult::Confident(Tier::Frontier));
         assert_eq!(fallback_tier("gemini-9"), FallbackResult::Default);
+    }
+
+    #[test]
+    fn gpt_5_phrase_classified_frontier() {
+        // Bare gpt-5 — version digit isn't a single segment, must be
+        // caught via FRONTIER_PHRASES.
+        assert_eq!(
+            fallback_tier("gpt-5"),
+            FallbackResult::Confident(Tier::Frontier)
+        );
+        assert_eq!(
+            fallback_tier("gpt-5-codex"),
+            FallbackResult::Confident(Tier::Frontier)
+        );
+    }
+
+    #[test]
+    fn gpt_5_mini_still_classified_mini() {
+        // Critical: MINI_KEYWORDS / MINI_PHRASES checked BEFORE
+        // FRONTIER_PHRASES, so user opting into mini variant respected.
+        assert_eq!(
+            fallback_tier("gpt-5-mini"),
+            FallbackResult::Confident(Tier::Mini)
+        );
+        assert_eq!(
+            fallback_tier("gpt-5-nano"),
+            FallbackResult::Confident(Tier::Mini)
+        );
+    }
+
+    #[test]
+    fn grok_4_classified_frontier() {
+        // xAI's flagship Grok 4 (and any future grok-5/6).
+        assert_eq!(
+            fallback_tier("grok-4"),
+            FallbackResult::Confident(Tier::Frontier)
+        );
+        assert_eq!(
+            fallback_tier("xai-grok-4-fast"),
+            FallbackResult::Confident(Tier::Frontier)
+        );
+    }
+
+    #[test]
+    fn grok_2_falls_through_to_default() {
+        // grok-2 is older / less-capable, no FRONTIER signal.
+        // Stays Default → caller maps to Mid + Confidence::Unknown.
+        assert_eq!(fallback_tier("grok-2"), FallbackResult::Default);
+    }
+
+    #[test]
+    fn deepseek_reasoner_classified_frontier() {
+        // DeepSeek's reasoning model — `reasoner` segment is a new
+        // Frontier signal (alongside o1/o3/o4 from OpenAI's o-series).
+        assert_eq!(
+            fallback_tier("deepseek-reasoner"),
+            FallbackResult::Confident(Tier::Frontier)
+        );
+        // Future R-series variant should also catch:
+        assert_eq!(
+            fallback_tier("deepseek-r2-reasoner"),
+            FallbackResult::Confident(Tier::Frontier)
+        );
     }
 
     #[test]

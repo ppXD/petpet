@@ -84,9 +84,9 @@
       "capabilities": ["tools", "vision", "extended_thinking", "prompt_caching"],
       "released": "2026-04",
       "source": {
-        "type": "back-derived",
-        "url": null,
-        "note": "Back-derived from CodexBar 5/16 reconciliation: petpet aggregate input=9394 / output=981958 / cache_read=392559814 / cache_create=3385391 vs CodexBar tooltip $241.89. Linear-system solve under Anthropic standard ratios (5×/0.1×/1.25× off input) → $5/$25/$0.50/$6.25 (computed $242.04, 0.06% match). Not on Anthropic's public pricing page."
+        "type": "vendor-official",
+        "url": "https://www.anthropic.com/pricing#api",
+        "note": "Anthropic Claude Opus 4.7 list pricing — same $5/$25 tier as Opus 4.5/4.6 (Anthropic dropped Opus pricing at 4.5). Originally added via CodexBar 5/16 reconciliation (0.06% match: petpet aggregate $242.04 vs CodexBar tooltip $241.89), later confirmed against Anthropic's published rates and LiteLLM upstream — the back-derivation happened to land on what became the new Anthropic list price for the 4.5+ generation."
       }
     },
     {
@@ -101,10 +101,10 @@
         "exact_aliases": ["claude-opus-4-5"]
       },
       "pricing_per_1m_usd": {
-        "input": 15.00,
-        "output": 75.00,
-        "cache_read": 1.50,
-        "cache_creation": 18.75,
+        "input": 5.00,
+        "output": 25.00,
+        "cache_read": 0.50,
+        "cache_creation": 6.25,
         "reasoning": 0.0
       },
       "capabilities": ["tools", "vision", "extended_thinking", "prompt_caching"],
@@ -112,7 +112,7 @@
       "source": {
         "type": "vendor-official",
         "url": "https://www.anthropic.com/pricing#api",
-        "note": "Anthropic Claude Opus 4.5 list pricing"
+        "note": "Anthropic Claude Opus 4.5 list pricing — Anthropic dropped Opus tier pricing at the 4.5 release (was $15/$75 for Opus 4 / 4.1, now $5/$25 from 4.5 onwards). Verified via LiteLLM cross-reference 2026-05-18."
       }
     },
     {
@@ -477,18 +477,18 @@
         "exact_aliases": ["o4-mini"]
       },
       "pricing_per_1m_usd": {
-        "input": 0.275,
-        "output": 1.10,
-        "cache_read": 0.0688,
+        "input": 1.10,
+        "output": 4.40,
+        "cache_read": 0.275,
         "cache_creation": 0.0,
-        "reasoning": 1.10
+        "reasoning": 4.40
       },
       "capabilities": ["tools", "reasoning"],
       "released": "2025-04",
       "source": {
         "type": "vendor-official",
         "url": "https://openai.com/api/pricing/",
-        "note": "OpenAI o4-mini reasoning model"
+        "note": "OpenAI o4-mini reasoning model — list price $1.10/$4.40 per 1M (was incorrectly transcribed as $0.275/$1.10 in earlier petpet bundles; corrected 2026-05-18 after LiteLLM cross-reference)."
       }
     },
     {
@@ -725,8 +725,8 @@
       },
       "pricing_per_1m_usd": {
         "input": 1.25,
-        "output": 5.00,
-        "cache_read": 0.0,
+        "output": 10.00,
+        "cache_read": 0.125,
         "cache_creation": 0.0,
         "reasoning": 0.0
       },
@@ -735,7 +735,7 @@
       "source": {
         "type": "vendor-official",
         "url": "https://ai.google.dev/pricing",
-        "note": "Gemini 2.5 Pro (≤200K context; >200K is $2.50/$15)"
+        "note": "Gemini 2.5 Pro — Google raised output pricing from $5 to $10 per 1M tokens (≤200K context; >200K still tiered higher). Corrected 2026-05-18 from LiteLLM."
       }
     },
     {
@@ -776,9 +776,9 @@
         "exact_aliases": ["gemini-2.5-flash", "gemini-2-5-flash"]
       },
       "pricing_per_1m_usd": {
-        "input": 0.15,
-        "output": 0.60,
-        "cache_read": 0.0,
+        "input": 0.30,
+        "output": 2.50,
+        "cache_read": 0.075,
         "cache_creation": 0.0,
         "reasoning": 0.0
       },
@@ -787,7 +787,7 @@
       "source": {
         "type": "vendor-official",
         "url": "https://ai.google.dev/pricing",
-        "note": "Gemini 2.5 Flash"
+        "note": "Gemini 2.5 Flash — pricing tier raised from $0.15/$0.60 to $0.30/$2.50 (output 4× increase). Corrected 2026-05-18 from LiteLLM."
       }
     },
     {
@@ -936,7 +936,7 @@
         "exact_aliases": ["deepseek-coder", "deepseek-coder-v2"]
       },
       "pricing_per_1m_usd": {
-        "input": 0.014,
+        "input": 0.14,
         "output": 0.28,
         "cache_read": 0.014,
         "cache_creation": 0.0,
@@ -948,7 +948,7 @@
       "source": {
         "type": "vendor-official",
         "url": "https://api-docs.deepseek.com/quick_start/pricing",
-        "note": "DeepSeek Coder (legacy, folded into V3 / Chat)"
+        "note": "DeepSeek Coder (legacy, folded into V3 / Chat) — input price $0.14/1M (was incorrectly transcribed as $0.014 in earlier petpet bundles; corrected 2026-05-18 from LiteLLM)."
       }
     },
 
@@ -1206,8 +1206,8 @@
         "exact_aliases": ["mistral-medium-latest", "mistral-medium-3"]
       },
       "pricing_per_1m_usd": {
-        "input": 0.40,
-        "output": 2.00,
+        "input": 2.70,
+        "output": 8.10,
         "cache_read": 0.0,
         "cache_creation": 0.0,
         "reasoning": 0.0
@@ -1217,7 +1217,7 @@
       "source": {
         "type": "vendor-official",
         "url": "https://mistral.ai/technology/#pricing",
-        "note": "Mistral Medium 3"
+        "note": "Mistral Medium 3 — actual list price $2.70/$8.10 per 1M (was incorrectly transcribed as $0.40/$2 in earlier petpet bundles; corrected 2026-05-18 from LiteLLM cross-reference, ~6× output miss)."
       }
     },
     {
