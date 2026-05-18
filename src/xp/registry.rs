@@ -34,7 +34,7 @@ use std::sync::OnceLock;
 
 use serde::Deserialize;
 
-use crate::model::{ModelIdent, Tier};
+use crate::model::{normalize, Tier};
 
 // ─── Deserialization types ──────────────────────────────────────────
 
@@ -257,8 +257,10 @@ impl Registry {
     pub fn lookup(&self, model_str: &str) -> Option<ResolvedEntry<'_>> {
         // Normalize through the same pipeline ModelIdent uses so the
         // registry sees consistent input regardless of caller. This
-        // strips vendor prefix, date suffix, dots-to-dashes.
-        let normalized = ModelIdent::parse(model_str).model;
+        // strips vendor prefix, date suffix, dots-to-dashes. We call
+        // `normalize` directly (not `ModelIdent::parse`) because parse
+        // calls `identify_tier`, which calls back here — that'd recurse.
+        let normalized = normalize(model_str);
 
         // 1. Special markers (free-tier etc.) — must fire BEFORE vendor
         //    entries so `claude-opus-4-7-free` resolves to $0 not $5/$25.
