@@ -216,6 +216,10 @@ impl XPEngine {
                 *engine.active.get_mut() = Some(active);
             }
         }
+        // Spawn the background registry sync task. The task short-circuits
+        // if `PETPET_REGISTRY_SYNC_DISABLED` is set, and any fetch failure
+        // is logged + retried after 24h — bundled registry covers us.
+        tokio::spawn(crate::xp::registry_sync::run());
         Ok(Arc::new(engine))
     }
 

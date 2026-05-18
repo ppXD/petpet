@@ -30,6 +30,7 @@ pub mod engine;
 pub mod heuristic;
 pub mod pricing;
 pub mod registry;
+pub mod registry_sync;
 pub mod resolver;
 pub mod scorer;
 pub mod state;

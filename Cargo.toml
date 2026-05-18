@@ -44,15 +44,16 @@ include_dir = "0.7"
 # zstd, lzma) to keep the binary lean — petpet archives only ever use
 # deflate (the universal browser-supported codec).
 zip = { version = "2", default-features = false, features = ["deflate"] }
+# HTTP client for `xp::registry_sync` (background fetch of the remote
+# model registry) and the E2E hook readiness probe in tests. rustls-tls
+# keeps us off platform-specific TLS stacks (OpenSSL / Schannel) so the
+# binary builds cleanly on every CI runner. `json` feature stays off —
+# we only need .text() and parse manually.
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [dev-dependencies]
 tempfile = "3"
 pretty_assertions = "1"
-# E2E hook test (tests/hooks_e2e.rs) drives the real `HookServer` via
-# the local OS shell. Needs a small HTTP client for the readiness
-# probe; rustls-tls keeps the test off platform-specific TLS stacks
-# (OpenSSL / Schannel) so it builds cleanly on every CI runner.
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 
 [profile.release]
 opt-level = "z"        # optimise for size (vs "3" for speed)

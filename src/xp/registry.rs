@@ -30,11 +30,19 @@
 //!    [`fallback_tier_for`] using the heuristic.
 
 use std::collections::HashMap;
+use std::path::PathBuf;
 use std::sync::OnceLock;
 
 use serde::Deserialize;
 
 use crate::model::{normalize, Tier};
+
+/// Schema version we read. The bundled `data/models.json` and any
+/// remote-synced cache MUST declare exactly this number. A mismatch
+/// from the remote means we ignore the cache and fall back to the
+/// bundled copy — protects against a future schema-breaking change
+/// in the registry repo silently corrupting older clients.
+pub const REGISTRY_SCHEMA_VERSION: u32 = 1;
 
 // ─── Deserialization types ──────────────────────────────────────────
 
@@ -213,13 +221,34 @@ pub struct ResolvedEntry<'a> {
 }
 
 impl Registry {
-    /// Load the registry embedded in the binary at compile time.
+    /// Load the registry. Prefers a remote-synced cache at
+    /// `~/.petpet/registry-cache.json` when present and schema-compatible,
+    /// otherwise falls back to the binary-embedded `data/models.json`.
+    ///
+    /// The singleton is built once per process — if the background
+    /// sync writes a fresh cache mid-run, the new data takes effect
+    /// on the next app start. We deliberately don't hot-swap because
+    /// (a) it's simpler, (b) restart frequency is high for a desktop
+    /// pet app, and (c) it prevents mid-event scoring inconsistencies.
     pub fn bundled() -> &'static Registry {
         static REGISTRY: OnceLock<Registry> = OnceLock::new();
-        REGISTRY.get_or_init(|| {
-            let json = include_str!("../../data/models.json");
-            Self::from_json(json).expect("bundled data/models.json must parse")
-        })
+        REGISTRY.get_or_init(Self::load_initial)
+    }
+
+    /// Build the in-memory registry from the best available source.
+    /// 1. `~/.petpet/registry-cache.json` if present + parses + schema OK
+    /// 2. Bundled `data/models.json` (always works, never network)
+    fn load_initial() -> Registry {
+        if let Some(cached) = try_load_cache() {
+            tracing::info!(
+                "registry: loaded {} entries from cache ({})",
+                cached.model_count(),
+                cache_path().display()
+            );
+            return cached;
+        }
+        let json = include_str!("../../data/models.json");
+        Self::from_json(json).expect("bundled data/models.json must parse")
     }
 
     /// Parse a registry from a JSON string. Used by tests and by future
@@ -304,6 +333,31 @@ impl Registry {
 
         None
     }
+}
+
+/// Resolve the cache file path. Sits next to the DB under `~/.petpet/`
+/// (honours `PETPET_HOME` for tests / portable installs).
+pub fn cache_path() -> PathBuf {
+    crate::paths::app_dir().join("registry-cache.json")
+}
+
+/// Best-effort cache load. Returns `None` if the file is missing,
+/// unreadable, malformed, or declares a different `schema_version` than
+/// we support. Any of those conditions is a normal failure mode that
+/// should fall back to bundled — never a hard error.
+fn try_load_cache() -> Option<Registry> {
+    let path = cache_path();
+    let json = std::fs::read_to_string(&path).ok()?;
+    let parsed = Registry::from_json(&json).ok()?;
+    if parsed.data.schema_version != REGISTRY_SCHEMA_VERSION {
+        tracing::warn!(
+            "registry cache schema_version={} but we support {}, ignoring cache",
+            parsed.data.schema_version,
+            REGISTRY_SCHEMA_VERSION
+        );
+        return None;
+    }
+    Some(parsed)
 }
 
 fn model_to_resolved(m: &ModelEntry) -> ResolvedEntry<'_> {
