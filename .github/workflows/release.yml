@@ -101,6 +101,43 @@ jobs:
         working-directory: desktop
         run: pnpm install --frozen-lockfile
 
+      # ─── macOS signing env (conditional) ─────────────────────────
+      # Tauri's bundler reads APPLE_CERTIFICATE / APPLE_SIGNING_IDENTITY
+      # directly from process env. If we pass them as empty strings
+      # (the default when secrets are unset), Tauri attempts to
+      # `security import` an empty file and the build fails with
+      # "failed to import keychain certificate".
+      #
+      # So: gate on APPLE_CERTIFICATE non-empty. Only export the
+      # Apple vars to subsequent steps when a real cert is present.
+      # Otherwise the env vars stay unset → Tauri falls back to
+      # ad-hoc signing → unsigned .dmg + xattr workaround documented
+      # in the release body.
+      - name: Configure macOS signing env (if secrets available)
+        if: matrix.os == 'macos-latest'
+        env:
+          APPLE_CERT: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERT_PWD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID_EMAIL: ${{ secrets.APPLE_ID }}
+          APPLE_PWD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$APPLE_CERT" ]; then
+            echo "macOS signing: ENABLED (notarized release)"
+            {
+              echo "APPLE_CERTIFICATE=$APPLE_CERT"
+              echo "APPLE_CERTIFICATE_PASSWORD=$APPLE_CERT_PWD"
+              echo "APPLE_SIGNING_IDENTITY=$APPLE_IDENTITY"
+              echo "APPLE_ID=$APPLE_ID_EMAIL"
+              echo "APPLE_PASSWORD=$APPLE_PWD"
+              echo "APPLE_TEAM_ID=$APPLE_TEAM"
+            } >> "$GITHUB_ENV"
+          else
+            echo "macOS signing: DISABLED — APPLE_CERTIFICATE secret not set."
+            echo "Build will produce an unsigned .dmg; users need 'xattr -cr' on install."
+          fi
+
       # ─── Linux-only system deps ──────────────────────────────────
       # Tauri 2 on GTK needs webkit2gtk + AppIndicator headers to
       # produce the .deb / .AppImage. Pulled fresh per run (cheap;
@@ -119,18 +156,14 @@ jobs:
             file
 
       # ─── The actual build ────────────────────────────────────────
+      # Apple env vars come from the preceding "Configure macOS signing
+      # env" step (via $GITHUB_ENV), only when secrets are non-empty.
+      # Passing them directly here as `env:` would set empty strings
+      # for unconfigured repos, which breaks Tauri's bundler.
       - name: Build + publish via tauri-action
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Apple signing — ALL optional; if any is missing, the
-          # action skips signing and produces an unsigned .dmg.
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: desktop
           tagName: ${{ inputs.tag || github.ref_name }}
