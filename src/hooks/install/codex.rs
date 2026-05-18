@@ -630,12 +630,23 @@ mod tests {
         let dir = tempdir().unwrap();
         let codex = dir.path().join(".codex");
         fs::create_dir_all(&codex).unwrap();
+        // `dirs::home_dir()` reads `HOME` on Unix and `USERPROFILE`
+        // on Windows. Setting only `HOME` would leave Windows tests
+        // resolving to the real runner's user profile and writing
+        // outside the sandbox — confirmed via failing CI on
+        // windows-latest. Swap both, restore both.
         let prev_home = std::env::var("HOME").ok();
+        let prev_userprofile = std::env::var("USERPROFILE").ok();
         std::env::set_var("HOME", dir.path());
+        std::env::set_var("USERPROFILE", dir.path());
         f(dir.path());
         match prev_home {
             Some(h) => std::env::set_var("HOME", h),
             None => std::env::remove_var("HOME"),
+        }
+        match prev_userprofile {
+            Some(v) => std::env::set_var("USERPROFILE", v),
+            None => std::env::remove_var("USERPROFILE"),
         }
     }
 

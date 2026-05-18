@@ -279,12 +279,21 @@ mod tests {
             .unwrap_or_else(|e| e.into_inner());
         let dir = tempdir().unwrap();
         fs::create_dir_all(dir.path().join(".gemini")).unwrap();
-        let prev = std::env::var("HOME").ok();
+        // `dirs::home_dir()` reads `HOME` on Unix and `USERPROFILE`
+        // on Windows — clear both into the tempdir so install paths
+        // resolve inside the sandbox on every CI runner.
+        let prev_home = std::env::var("HOME").ok();
+        let prev_userprofile = std::env::var("USERPROFILE").ok();
         std::env::set_var("HOME", dir.path());
+        std::env::set_var("USERPROFILE", dir.path());
         f(dir.path());
-        match prev {
+        match prev_home {
             Some(h) => std::env::set_var("HOME", h),
             None => std::env::remove_var("HOME"),
+        }
+        match prev_userprofile {
+            Some(v) => std::env::set_var("USERPROFILE", v),
+            None => std::env::remove_var("USERPROFILE"),
         }
     }
 
