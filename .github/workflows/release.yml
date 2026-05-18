@@ -243,7 +243,10 @@ jobs:
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          REL_ID=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json id --jq .id)
+          # `--json id` returns the GraphQL Node ID (RE_kwDOSg…),
+          # which the REST API /releases/{id}/assets rejects with 404.
+          # `databaseId` is the numeric REST id (e.g. 1234567).
+          REL_ID=$(gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --json databaseId --jq .databaseId)
           echo "Release id: $REL_ID"
 
           rename_asset() {
