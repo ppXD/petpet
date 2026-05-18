@@ -1,0 +1,177 @@
+# Tauri release builds for every supported platform.
+#
+# Triggered by pushing a `v*` tag (e.g. `v0.2.0`); produces a draft
+# GitHub Release with installers attached:
+#
+#   macOS:   universal .dmg (arm64 + Intel in one bundle)
+#   Linux:   .deb + .AppImage  (x86_64-unknown-linux-gnu)
+#   Windows: .msi              (x86_64-pc-windows-msvc)
+#
+# The release is created as a draft so the maintainer reviews the
+# artifacts before clicking "Publish" — that's the chance to catch a
+# missing icon / broken installer before users see it.
+#
+# # macOS signing & notarization
+#
+# All Apple secrets are OPTIONAL. With them set, `tauri-action`
+# signs + notarizes and produces a Gatekeeper-clean .dmg. Without
+# them, the .dmg is unsigned and users need `xattr -cr` to launch
+# (instructions in the release body).
+#
+# Required secrets for full notarization (skip any to fall back to
+# unsigned):
+#
+#   APPLE_CERTIFICATE             base64(.p12 Developer ID Application cert)
+#   APPLE_CERTIFICATE_PASSWORD    password of the .p12
+#   APPLE_SIGNING_IDENTITY        e.g. "Developer ID Application: Name (TEAMID)"
+#   APPLE_ID                      Apple ID email
+#   APPLE_PASSWORD                app-specific password from appleid.apple.com
+#   APPLE_TEAM_ID                 10-char team id from developer.apple.com
+#
+# # Why not test.yml's tag-push trigger?
+#
+# Releases are slower (~10–20 min per platform, especially Windows),
+# heavier (frontend bundle + Tauri webview integration), and produce
+# binaries — qualitatively different from the per-commit smoke tests
+# in test.yml. Kept separate so a flaky release build doesn't block
+# routine PR merges.
+
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag name to release (e.g. v0.1.0) — must already exist on the repo'
+        required: true
+
+permissions:
+  contents: write    # tauri-action creates the release + uploads assets
+
+jobs:
+  publish-tauri:
+    name: build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            args: '--target universal-apple-darwin'
+            label: 'macOS (universal)'
+          - os: ubuntu-22.04
+            args: ''
+            label: 'Linux x64'
+          - os: windows-latest
+            args: ''
+            label: 'Windows x64'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # ─── Toolchains ──────────────────────────────────────────────
+      # macOS universal needs BOTH rustc targets so `lipo` can produce
+      # a fat binary. Other platforms only need their native target.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add macOS targets (universal build)
+        if: matrix.os == 'macos-latest'
+        run: rustup target add aarch64-apple-darwin x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          # Distinct cache per platform — they share zero artifacts.
+          key: ${{ matrix.os }}-release
+
+      - uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: desktop/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        working-directory: desktop
+        run: pnpm install --frozen-lockfile
+
+      # ─── Linux-only system deps ──────────────────────────────────
+      # Tauri 2 on GTK needs webkit2gtk + AppIndicator headers to
+      # produce the .deb / .AppImage. Pulled fresh per run (cheap;
+      # ~30s) rather than cached — the runner image bumps versions
+      # occasionally and a stale cache silently miscompiles.
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            file
+
+      # ─── The actual build ────────────────────────────────────────
+      - name: Build + publish via tauri-action
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Apple signing — ALL optional; if any is missing, the
+          # action skips signing and produces an unsigned .dmg.
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          projectPath: desktop
+          tagName: ${{ inputs.tag || github.ref_name }}
+          releaseName: 'petpet ${{ inputs.tag || github.ref_name }}'
+          # Release stays a draft so the maintainer can review artifacts
+          # + edit the body before users see it.
+          releaseDraft: true
+          prerelease: false
+          releaseBody: |
+            ## Install
+
+            ### macOS (universal — Apple Silicon + Intel)
+
+            Download the `.dmg`, drag petpet to `/Applications`, then **strip the quarantine attribute** (the build is unsigned for now):
+
+            ```sh
+            xattr -cr /Applications/petpet.app
+            ```
+
+            Open as usual after that. This unlocks the app on macOS Sonoma+ where Gatekeeper otherwise blocks unsigned downloads with an "is damaged" warning.
+
+            > **Why the workaround?** petpet ships without Apple Developer notarization at this stage ($99/year per Apple). Once we have an Apple Developer account configured, the warning disappears completely.
+
+            ### Linux x64
+
+            Pick whichever your distro prefers:
+
+            ```sh
+            # Debian / Ubuntu
+            sudo dpkg -i petpet_*_amd64.deb
+
+            # AppImage (portable; no install needed)
+            chmod +x petpet_*_amd64.AppImage
+            ./petpet_*_amd64.AppImage
+            ```
+
+            ### Windows x64
+
+            Run the `petpet_*_x64_en-US.msi` installer; double-click to launch from the Start menu after install.
+
+            ---
+
+            🤖 Generated by `.github/workflows/release.yml`. Artifacts built on GitHub-hosted runners; binaries reproducible from the source tree at this tag.
+          args: ${{ matrix.args }}
