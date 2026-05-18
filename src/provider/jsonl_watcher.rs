@@ -33,7 +33,7 @@ use tokio::io::AsyncReadExt;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 
-use crate::db::{Cursor, DbHandle};
+use crate::db::{Cursor, CursorKind, DbHandle};
 use crate::event::{ActivityEvent, ProviderId, SourceRef, UsageEvent};
 use crate::hooks::ActivitySink;
 use crate::provider::{BackfillStats, EventSink};
@@ -68,14 +68,36 @@ pub struct JsonlWatcher {
     make_reader: ReaderFactory,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 enum EmitMode {
-    /// Backfill / catchup — emit usage events only. Activity events are
-    /// **suppressed** because we'd replay hours of historical animations.
+    /// Backfill / catchup on the LIVE cursor — emit usage events only.
+    /// Activity events suppressed (we'd replay hours of animations).
+    /// At first-discovery, snap to EOF (no events emitted) so the pet
+    /// doesn't get back-credit for pre-install activity.
     UsageOnly,
     /// Live watch — emit both usage AND activity. Activity drives the
     /// frontend pet's real-time reactions.
     Live,
+    /// Historical import on the HISTORY cursor (display-only path).
+    /// Unlike `UsageOnly`, at first-discovery this emits FROM BYTE 0
+    /// to populate `usage_event` for the Dashboard's "All" view. The
+    /// downstream sink for this mode is the history sink (DB-only),
+    /// so emitted usage events flow into the table without granting
+    /// XP to any pet. Activity events still suppressed.
+    ImportHistorical,
+}
+
+impl EmitMode {
+    /// Which cursor table this mode reads/writes. Live + UsageOnly share
+    /// `file_cursor`; ImportHistorical uses the separate
+    /// `file_cursor_history` lane so its progress can't be clobbered by
+    /// the live-tail's snap-to-EOF behaviour (and vice versa).
+    fn cursor_kind(self) -> CursorKind {
+        match self {
+            EmitMode::UsageOnly | EmitMode::Live => CursorKind::Live,
+            EmitMode::ImportHistorical => CursorKind::History,
+        }
+    }
 }
 
 impl JsonlWatcher {
@@ -87,6 +109,45 @@ impl JsonlWatcher {
         make_reader: ReaderFactory,
     ) -> Self {
         Self { provider_id, roots, glob, db, make_reader }
+    }
+
+    /// **Display-only historical import** (Phase 2 addition).
+    ///
+    /// Drives the Dashboard's "All" view. Scans every JSONL file the
+    /// provider knows about and emits `usage_event`s for the contents
+    /// past this lane's own cursor (`file_cursor_history`). The sink
+    /// passed in MUST route ONLY to the DB writer — *NOT* to the XP
+    /// engine — otherwise we'd retroactively grant XP for pre-install
+    /// activity. Phase 2's `lib.rs::spawn_ingestion` wires a dedicated
+    /// `history_sink` for exactly this.
+    ///
+    /// On every app open this re-runs and catches up to current EOF.
+    /// UUID dedup at the `usage_event.id` primary key keeps the table
+    /// row-count stable across re-runs (overlapping content is silently
+    /// `INSERT OR IGNORE`'d).
+    ///
+    /// Returns the same `BackfillStats` shape as [`backfill`]. Callers
+    /// can log `stats.events_emitted` as a freshness signal.
+    pub async fn import_historical(&self, sink: &EventSink) -> Result<BackfillStats> {
+        let started = Instant::now();
+        let files = self.discover_files()?;
+        let mut stats = BackfillStats::default();
+
+        for path in files {
+            let per_file = self
+                .drain_file(&path, sink, None, EmitMode::ImportHistorical)
+                .await?;
+            stats += per_file;
+        }
+        stats.duration = started.elapsed();
+        tracing::info!(
+            provider = %self.provider_id,
+            events = stats.events_emitted,
+            files = stats.files_scanned,
+            elapsed_ms = stats.duration.as_millis() as u64,
+            "historical import complete (display-only, no XP)"
+        );
+        Ok(stats)
     }
 
     /// One-shot scan: catch up from each file's cursor to EOF.
@@ -214,11 +275,13 @@ impl JsonlWatcher {
             _ => {}
         }
 
+        // Only touches the LIVE cursor — the history lane catches the
+        // offline gap separately via import_historical.
         let files = self.discover_files()?;
         let mut snapped = 0u32;
         for path in files {
             let path_str = path.to_string_lossy().to_string();
-            let prior = match self.db.get_cursor(self.provider_id, &path_str).await? {
+            let prior = match self.db.get_cursor(self.provider_id, &path_str, CursorKind::Live).await? {
                 Some(c) => c,
                 None => continue,
             };
@@ -231,6 +294,7 @@ impl JsonlWatcher {
                     .set_cursor(
                         self.provider_id,
                         &path_str,
+                        CursorKind::Live,
                         Cursor { byte_offset: file_len, line_index: prior.line_index },
                     )
                     .await?;
@@ -339,13 +403,30 @@ impl JsonlWatcher {
         let metadata = tokio::fs::metadata(path).await?;
         let file_len = metadata.len();
 
-        let prior = self.db.get_cursor(self.provider_id, &path_str).await?;
+        let cursor_kind = mode.cursor_kind();
+        let prior = self.db.get_cursor(self.provider_id, &path_str, cursor_kind).await?;
         let first_seen = prior.is_none();
 
-        // Emit threshold: byte offset above which lines are "new" and worth
-        // surfacing to the sink. On first-see we set it to `file_len` so
-        // pre-existing content gets parsed for state only, not emitted.
-        let mut emit_threshold = prior.map(|c| c.byte_offset).unwrap_or(file_len);
+        // Emit threshold: byte offset above which lines are "new" and
+        // worth surfacing to the sink.
+        //
+        //  ┌────────────────────┬───────────────────┬───────────────────────────┐
+        //  │ mode               │ first_seen        │ subsequent (have cursor)  │
+        //  ├────────────────────┼───────────────────┼───────────────────────────┤
+        //  │ Live / UsageOnly   │ EOF (no emit) ¹   │ cursor.byte_offset        │
+        //  │ ImportHistorical   │ 0 (emit all) ²    │ cursor.byte_offset        │
+        //  └────────────────────┴───────────────────┴───────────────────────────┘
+        //
+        //  ¹ "Install-time boundary" — the live cursor lane never back-
+        //    credits XP for pre-install activity.
+        //  ² Display-only lane catches pre-install activity into
+        //    `usage_event` for the Dashboard's "All" view. UUID dedup at
+        //    the DB layer keeps repeat-runs idempotent.
+        let mut emit_threshold = match (mode, prior) {
+            (EmitMode::ImportHistorical, None) => 0,
+            (_, None) => file_len,
+            (_, Some(c)) => c.byte_offset,
+        };
 
         // File rotation / truncation: persisted cursor points past EOF.
         // Reset; deterministic UUIDs keep re-insertion idempotent.
@@ -360,7 +441,12 @@ impl JsonlWatcher {
                 );
                 emit_threshold = 0;
                 self.db
-                    .set_cursor(self.provider_id, &path_str, Cursor { byte_offset: 0, line_index: 0 })
+                    .set_cursor(
+                        self.provider_id,
+                        &path_str,
+                        cursor_kind,
+                        Cursor { byte_offset: 0, line_index: 0 },
+                    )
                     .await?;
             }
         }
@@ -415,16 +501,18 @@ impl JsonlWatcher {
         stats.bytes_scanned = last_complete_offset;
 
         // Persist cursor at the last fully-read line boundary so the next
-        // pass picks up cleanly after any partial trailing line.
+        // pass picks up cleanly after any partial trailing line. Writes
+        // to whichever cursor table matches the mode (live vs history).
         self.db
             .set_cursor(
                 self.provider_id,
                 &path_str,
+                cursor_kind,
                 Cursor { byte_offset: last_complete_offset, line_index },
             )
             .await?;
 
-        if first_seen {
+        if first_seen && mode != EmitMode::ImportHistorical {
             tracing::debug!(
                 provider = %self.provider_id,
                 path = %path.display(),
@@ -434,5 +522,275 @@ impl JsonlWatcher {
             );
         }
         Ok(stats)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Unit tests for the dual-cursor behaviour added in Phase 2.
+    //!
+    //! Focus areas:
+    //!   - `EmitMode::ImportHistorical` emits pre-install content
+    //!     (`emit_threshold = 0` on first-seen) while `UsageOnly` /
+    //!     `Live` still snap to EOF on first-seen (`emit_threshold =
+    //!     file_len`, no emit).
+    //!   - Live and History cursors advance independently — running
+    //!     `import_historical` never moves the live cursor (otherwise
+    //!     `snap_known_cursors_to_eof` could swallow events that should
+    //!     have been visible in "All").
+    //!   - Repeated `import_historical` calls are no-ops past the first
+    //!     scan (cursor caught up to EOF; no duplicate emits at the
+    //!     sink layer — DB-level UUID dedup tested elsewhere).
+
+    use super::*;
+    use crate::event::{EventKind, ProviderId, TokenDelta};
+    use chrono::Utc;
+    use std::sync::Mutex as StdMutex;
+    use tokio::sync::mpsc;
+    use uuid::Uuid;
+
+    /// Trivial reader that turns each non-empty line into one
+    /// `UsageEvent` with deterministic UUIDs derived from
+    /// `(file, line_index)` — mirrors the real parsers' invariant.
+    struct LineCountReader;
+    impl JsonlReader for LineCountReader {
+        fn parse_line(&mut self, line: &str, source: SourceRef) -> ParseOutput {
+            if line.trim().is_empty() {
+                return ParseOutput::default();
+            }
+            let id = Uuid::new_v5(
+                &Uuid::NAMESPACE_OID,
+                format!("{}:{}", source.file, source.line).as_bytes(),
+            );
+            let ev = UsageEvent {
+                id,
+                provider: ProviderId::ClaudeCode,
+                client: None,
+                session_id: "test".into(),
+                project_path: None,
+                git_branch: None,
+                model: "claude-test".into(),
+                timestamp: Utc::now(),
+                tokens: TokenDelta {
+                    input: 1,
+                    output: 1,
+                    cache_read: 0,
+                    cache_creation: 0,
+                    reasoning: 0,
+                },
+                kind: EventKind::Turn { stop_reason: None },
+                source,
+            };
+            ParseOutput {
+                usage: vec![ev],
+                activity: vec![],
+            }
+        }
+    }
+
+    /// Test harness — open a fresh in-memory-equivalent DB on a tempdir
+    /// + a watcher pointed at a directory we control.
+    struct Harness {
+        _tmp: tempfile::TempDir,
+        db: Arc<DbHandle>,
+        root: PathBuf,
+        watcher: JsonlWatcher,
+    }
+
+    impl Harness {
+        async fn new() -> Self {
+            let tmp = tempfile::tempdir().unwrap();
+            let db_path = tmp.path().join("test.db");
+            let db = DbHandle::open(&db_path).await.unwrap();
+            let root = tmp.path().join("logs");
+            std::fs::create_dir_all(&root).unwrap();
+            let watcher = JsonlWatcher::new(
+                ProviderId::ClaudeCode,
+                vec![root.clone()],
+                "**/*.jsonl",
+                db.clone(),
+                Arc::new(|_| Box::new(LineCountReader)),
+            );
+            Self { _tmp: tmp, db, root, watcher }
+        }
+
+        fn write_jsonl(&self, name: &str, lines: usize) -> PathBuf {
+            let path = self.root.join(name);
+            let mut s = String::new();
+            for i in 0..lines {
+                s.push_str(&format!("{{\"line\":{}}}\n", i));
+            }
+            std::fs::write(&path, s).unwrap();
+            path
+        }
+
+        async fn append_jsonl(&self, path: &Path, lines: usize) {
+            let existing = std::fs::read_to_string(path).unwrap_or_default();
+            let line_count = existing.lines().count();
+            let mut s = existing;
+            for i in 0..lines {
+                s.push_str(&format!("{{\"line\":{}}}\n", line_count + i));
+            }
+            std::fs::write(path, s).unwrap();
+        }
+    }
+
+    /// Drain into a captured Vec for assertions.
+    fn capture_sink() -> (EventSink, std::sync::Arc<StdMutex<Vec<UsageEvent>>>) {
+        let captured = std::sync::Arc::new(StdMutex::new(Vec::new()));
+        let captured_clone = captured.clone();
+        let (tx, mut rx) = mpsc::channel::<UsageEvent>(1024);
+        let sink = EventSink::new(tx);
+        // Drain in a background task so .emit().await doesn't block.
+        tokio::spawn(async move {
+            while let Some(ev) = rx.recv().await {
+                captured_clone.lock().unwrap().push(ev);
+            }
+        });
+        (sink, captured)
+    }
+
+    async fn flush_sink() {
+        // Give the background drain task a tick to absorb everything
+        // pushed via `.emit().await`. mpsc::channel is bounded, so
+        // .emit() returns once the value is in the queue — but the
+        // receiver may not have polled yet. A short yield is enough.
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+
+    // ─── EmitMode::ImportHistorical on first-seen file ─────────────
+
+    #[tokio::test]
+    async fn import_historical_emits_all_lines_on_first_seen() {
+        let h = Harness::new().await;
+        h.write_jsonl("session.jsonl", 5);
+        let (sink, captured) = capture_sink();
+        let stats = h.watcher.import_historical(&sink).await.unwrap();
+        flush_sink().await;
+        assert_eq!(stats.events_emitted, 5, "all 5 lines emitted");
+        assert_eq!(captured.lock().unwrap().len(), 5);
+    }
+
+    /// `UsageOnly` (regular `backfill()` mode) MUST keep its install-
+    /// time-boundary behaviour: first-seen → emit_threshold = file_len
+    /// → nothing emitted. Regression check for the existing XP-
+    /// correctness invariant.
+    #[tokio::test]
+    async fn usage_only_skips_first_seen_unchanged() {
+        let h = Harness::new().await;
+        h.write_jsonl("session.jsonl", 5);
+        let (sink, captured) = capture_sink();
+        let stats = h.watcher.backfill(&sink).await.unwrap();
+        flush_sink().await;
+        assert_eq!(stats.events_emitted, 0, "first-seen non-import: skip all");
+        assert!(captured.lock().unwrap().is_empty());
+    }
+
+    // ─── Cursor isolation between Live and History lanes ───────────
+
+    #[tokio::test]
+    async fn import_historical_does_not_advance_live_cursor() {
+        let h = Harness::new().await;
+        let path = h.write_jsonl("session.jsonl", 3);
+        let path_str = path.to_string_lossy().to_string();
+        let (sink, _) = capture_sink();
+        h.watcher.import_historical(&sink).await.unwrap();
+        flush_sink().await;
+
+        // History cursor advanced to EOF, Live cursor untouched (None).
+        let live = h
+            .db
+            .get_cursor(ProviderId::ClaudeCode, &path_str, CursorKind::Live)
+            .await
+            .unwrap();
+        let hist = h
+            .db
+            .get_cursor(ProviderId::ClaudeCode, &path_str, CursorKind::History)
+            .await
+            .unwrap();
+        assert!(live.is_none(), "Live cursor must not be touched by history import");
+        assert!(hist.is_some(), "History cursor must be set after import");
+        assert!(hist.unwrap().byte_offset > 0);
+    }
+
+    /// Inverse: snap_known_cursors_to_eof + live watch advance the
+    /// Live cursor but MUST NOT touch the History cursor. Tested via
+    /// `backfill()` (uses Live lane) on an existing file.
+    #[tokio::test]
+    async fn live_lane_does_not_advance_history_cursor() {
+        let h = Harness::new().await;
+        let path = h.write_jsonl("session.jsonl", 3);
+        let path_str = path.to_string_lossy().to_string();
+        let (sink, _) = capture_sink();
+        h.watcher.backfill(&sink).await.unwrap();
+        flush_sink().await;
+
+        let live = h
+            .db
+            .get_cursor(ProviderId::ClaudeCode, &path_str, CursorKind::Live)
+            .await
+            .unwrap();
+        let hist = h
+            .db
+            .get_cursor(ProviderId::ClaudeCode, &path_str, CursorKind::History)
+            .await
+            .unwrap();
+        assert!(live.is_some(), "Live cursor set by backfill (snapped to EOF)");
+        assert!(hist.is_none(), "History cursor untouched by live-lane work");
+    }
+
+    // ─── Idempotency: repeat import is a no-op ─────────────────────
+
+    #[tokio::test]
+    async fn import_historical_second_run_is_noop_when_no_new_content() {
+        let h = Harness::new().await;
+        h.write_jsonl("session.jsonl", 4);
+        let (sink, captured) = capture_sink();
+        let s1 = h.watcher.import_historical(&sink).await.unwrap();
+        flush_sink().await;
+        let s2 = h.watcher.import_historical(&sink).await.unwrap();
+        flush_sink().await;
+        assert_eq!(s1.events_emitted, 4);
+        assert_eq!(s2.events_emitted, 0, "second run sees cursor at EOF, emits 0");
+        assert_eq!(
+            captured.lock().unwrap().len(),
+            4,
+            "only the first run's 4 events ever reached the sink"
+        );
+    }
+
+    /// New content appended between calls must be picked up by the
+    /// second call (and ONLY the new content).
+    #[tokio::test]
+    async fn import_historical_picks_up_new_content_on_repeat() {
+        let h = Harness::new().await;
+        let path = h.write_jsonl("session.jsonl", 3);
+        let (sink, captured) = capture_sink();
+        h.watcher.import_historical(&sink).await.unwrap();
+        flush_sink().await;
+        assert_eq!(captured.lock().unwrap().len(), 3);
+
+        h.append_jsonl(&path, 2).await;
+
+        let s2 = h.watcher.import_historical(&sink).await.unwrap();
+        flush_sink().await;
+        assert_eq!(s2.events_emitted, 2, "only new lines emitted");
+        assert_eq!(captured.lock().unwrap().len(), 5, "3 old + 2 new");
+    }
+
+    /// Three independent files all get scanned in one import call.
+    /// Regression check for the discover_files glob + per-file cursor.
+    #[tokio::test]
+    async fn import_historical_scans_multiple_files() {
+        let h = Harness::new().await;
+        h.write_jsonl("a.jsonl", 2);
+        h.write_jsonl("b.jsonl", 3);
+        h.write_jsonl("c.jsonl", 1);
+        let (sink, captured) = capture_sink();
+        let stats = h.watcher.import_historical(&sink).await.unwrap();
+        flush_sink().await;
+        assert_eq!(stats.files_scanned, 3);
+        assert_eq!(stats.events_emitted, 6);
+        assert_eq!(captured.lock().unwrap().len(), 6);
     }
 }

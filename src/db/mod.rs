@@ -70,22 +70,38 @@ impl DbHandle {
         Ok(Arc::new(Self { conn: Arc::new(Mutex::new(conn)) }))
     }
 
-    /// Returns the persisted cursor for a file, or `None` if we have never
-    /// seen it before. The `None` case is meaningful: at first-discovery we
-    /// snap the cursor to current EOF so historical data stays in the source
-    /// files but never enters our DB. This way the pet starts from zero on
-    /// every fresh install, regardless of how much history exists on disk.
-    pub async fn get_cursor(&self, provider: ProviderId, file: &str) -> Result<Option<Cursor>> {
+    /// Returns the persisted cursor for a file under the given `kind`, or
+    /// `None` if we have never seen it before via that ingestion lane.
+    ///
+    /// petpet maintains TWO independent cursors per file (added Phase 2):
+    ///
+    /// - [`CursorKind::Live`] — the XP-granting lane. At first-discovery
+    ///   we snap the cursor to EOF so the pet doesn't get back-credit for
+    ///   pre-install activity. Advances only on real-time events.
+    /// - [`CursorKind::History`] — the display-only lane. At first-discovery
+    ///   the cursor is `None` and the historical importer scans from byte 0
+    ///   to populate `usage_event` for the Dashboard's "All" view. Bypasses
+    ///   the XP engine entirely.
+    pub async fn get_cursor(
+        &self,
+        provider: ProviderId,
+        file: &str,
+        kind: CursorKind,
+    ) -> Result<Option<Cursor>> {
         let conn = self.conn.clone();
         let file = file.to_string();
+        let table = kind.table_name();
         let cur = tokio::task::spawn_blocking(move || -> Result<Option<Cursor>> {
             let g = conn.blocking_lock();
+            // Table name is a compile-time enum mapping, never user input —
+            // safe to interpolate. `params!` still handles values.
+            let sql = format!(
+                "SELECT byte_offset, line_index FROM {table} WHERE provider = ?1 AND file_path = ?2"
+            );
             let row: Option<(i64, i64)> = g
-                .query_row(
-                    "SELECT byte_offset, line_index FROM file_cursor WHERE provider = ?1 AND file_path = ?2",
-                    params![provider.as_str(), file],
-                    |r| Ok((r.get(0)?, r.get(1)?)),
-                )
+                .query_row(&sql, params![provider.as_str(), file], |r| {
+                    Ok((r.get(0)?, r.get(1)?))
+                })
                 .optional()?;
             Ok(row.map(|(b, l)| Cursor { byte_offset: b as u64, line_index: l as u64 }))
         })
@@ -97,19 +113,24 @@ impl DbHandle {
         &self,
         provider: ProviderId,
         file: &str,
+        kind: CursorKind,
         cursor: Cursor,
     ) -> Result<()> {
         let conn = self.conn.clone();
         let file = file.to_string();
+        let table = kind.table_name();
         tokio::task::spawn_blocking(move || -> Result<()> {
             let g = conn.blocking_lock();
-            g.execute(
-                "INSERT INTO file_cursor (provider, file_path, byte_offset, line_index, updated_at)
+            let sql = format!(
+                "INSERT INTO {table} (provider, file_path, byte_offset, line_index, updated_at)
                  VALUES (?1, ?2, ?3, ?4, datetime('now'))
                  ON CONFLICT (provider, file_path) DO UPDATE SET
                     byte_offset = excluded.byte_offset,
                     line_index = excluded.line_index,
-                    updated_at = excluded.updated_at",
+                    updated_at = excluded.updated_at"
+            );
+            g.execute(
+                &sql,
                 params![provider.as_str(), file, cursor.byte_offset as i64, cursor.line_index as i64],
             )?;
             Ok(())
@@ -1265,6 +1286,36 @@ fn drop_column_if_present(c: &Connection, table: &str, col: &str) -> Result<()> 
 pub struct Cursor {
     pub byte_offset: u64,
     pub line_index: u64,
+}
+
+/// Which cursor table to read/write. petpet maintains two independent
+/// resume positions per (provider, file):
+///
+/// - [`CursorKind::Live`] — XP-granting live-tail lane. Snapped to EOF
+///   at startup (when heartbeat is old) to prevent back-crediting
+///   offline-gap activity.
+/// - [`CursorKind::History`] — display-only historical import lane.
+///   Advances independently; allowed to scan the whole file at first
+///   launch so the Dashboard's "All" view sees pre-install activity.
+///
+/// The two lanes write to physically separate tables (`file_cursor` and
+/// `file_cursor_history`) so neither can clobber the other.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CursorKind {
+    Live,
+    History,
+}
+
+impl CursorKind {
+    /// Maps the enum to the backing SQLite table name. Returned as a
+    /// `&'static str` (compile-time constants) so callers can safely
+    /// `format!` it into a SQL string without injection risk.
+    pub fn table_name(self) -> &'static str {
+        match self {
+            CursorKind::Live => "file_cursor",
+            CursorKind::History => "file_cursor_history",
+        }
+    }
 }
 
 /// Row shape used internally by `get_pet_state`.

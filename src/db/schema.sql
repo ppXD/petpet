@@ -35,6 +35,39 @@ CREATE TABLE IF NOT EXISTS file_cursor (
     PRIMARY KEY (provider, file_path)
 );
 
+-- Parallel cursor table for the historical-display ingestion path.
+-- petpet has two independent ingestion lanes per JSONL file:
+--
+--   `file_cursor`          live-tail path. On every startup we snap
+--                          forward to EOF (if heartbeat is old) to
+--                          avoid back-granting XP for offline-gap
+--                          activity. Cursor only advances when a
+--                          NEW event lands while petpet is running,
+--                          so XP credit is gated on "app is alive +
+--                          pet is active".
+--
+--   `file_cursor_history`  display-only path (added Phase 2). On
+--                          every startup we run an async import that
+--                          scans from this cursor (or byte 0 on
+--                          first-ever launch) to EOF, writes
+--                          usage_event rows for the Dashboard's "All"
+--                          view, and bypasses the XP engine entirely.
+--                          Offline-gap events DO get captured here.
+--
+-- Separate tables (vs a `kind` column on the existing PK) avoid an
+-- ALTER TABLE migration on a column that's part of the PRIMARY KEY,
+-- which SQLite doesn't support cleanly. Two independent cursors per
+-- (provider, file) lets either lane advance without affecting the
+-- other.
+CREATE TABLE IF NOT EXISTS file_cursor_history (
+    provider       TEXT NOT NULL,
+    file_path      TEXT NOT NULL,
+    byte_offset    INTEGER NOT NULL,
+    line_index     INTEGER NOT NULL DEFAULT 0,
+    updated_at     TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (provider, file_path)
+);
+
 -- Heartbeat: petpet writes a row every ~30s while alive.
 CREATE TABLE IF NOT EXISTS app_heartbeat (
     id          INTEGER PRIMARY KEY,

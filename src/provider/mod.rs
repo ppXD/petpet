@@ -74,6 +74,25 @@ pub trait Provider: Send + Sync + 'static {
     /// backfill (we'd replay historical animations otherwise).
     async fn backfill(&self, sink: &EventSink) -> Result<BackfillStats>;
 
+    /// **Display-only historical import** (Phase 2 addition).
+    ///
+    /// Reads every JSONL file the provider knows about — including
+    /// content that pre-dates petpet's install — and emits `UsageEvent`s
+    /// into `sink`. The CALLER MUST route this sink to the DB-writer
+    /// only (NOT through the XP engine), otherwise pets would get
+    /// back-credit for pre-install activity.
+    ///
+    /// Tracked under the separate `file_cursor_history` cursor so it
+    /// can advance independently of the live-tail cursor. Designed to
+    /// be invoked once per app open; UUID dedup at `usage_event.id`
+    /// keeps the table consistent across repeat invocations.
+    ///
+    /// Default impl returns empty stats — non-JSONL providers can leave
+    /// this unimplemented if they have no historical data on disk.
+    async fn import_historical(&self, _sink: &EventSink) -> Result<BackfillStats> {
+        Ok(BackfillStats::default())
+    }
+
     /// Run forever, emitting both **usage** events (for SQLite / pet
     /// growth) and **activity** events (for live frontend animation).
     ///
