@@ -23,8 +23,8 @@ import "./Dashboard.css";
 
 /// Sentinel `pet_id` value sent to the backend to request the
 /// library-wide aggregate dashboard (the "ALL PETS" sidebar tile).
-/// Matches `ALL_PETS_SCOPE` in `desktop/src-tauri/src/dashboard.rs`.
-const ALL_PETS_SCOPE = "__all__";
+/// Matches `ALL_SCOPE` in `desktop/src-tauri/src/dashboard.rs`.
+const ALL_SCOPE = "__all__";
 
 interface DashboardData {
   /// `null` ⇒ this is the ALL PETS aggregate view; the frontend
@@ -367,8 +367,8 @@ function DashboardSidebar({
   return (
     <div className="dash-sidebar">
       <SidebarAllTile
-        selected={selectedPetId === ALL_PETS_SCOPE}
-        onClick={() => onSelect(ALL_PETS_SCOPE)}
+        selected={selectedPetId === ALL_SCOPE}
+        onClick={() => onSelect(ALL_SCOPE)}
         petCount={summaries.length}
       />
       {ordered.map((s) => (
@@ -403,7 +403,7 @@ function SidebarAllTile({
         selected ? " is-selected" : ""
       }`}
       onClick={onClick}
-      title={`Aggregate stats across all ${petCount} ${petCount === 1 ? "pet" : "pets"}`}
+      title={`All activity on this machine — every pet plus pre-install history (${petCount} ${petCount === 1 ? "pet" : "pets"})`}
     >
       <div className="dash-sidebar-tile-sprite dash-sidebar-tile-all-icon">
         {/* Three stacked offset squares: visually says "all of them".
@@ -498,11 +498,13 @@ function AllPetsIdentitySection({
   return (
     <div className="dash-identity dash-identity-all">
       <div className="dash-identity-all-header">
-        <span className="dash-identity-all-title">ALL PETS</span>
+        <span className="dash-identity-all-title">All</span>
         <span className="dash-identity-all-sub">
           {aggregate.pet_count} {aggregate.pet_count === 1 ? "pet" : "pets"}
           {" · "}
           oldest raised {days} {days === 1 ? "day" : "days"}
+          {" · "}
+          incl. pre-install history
         </span>
       </div>
       <div className="dash-identity-all-grid">

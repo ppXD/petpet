@@ -48,10 +48,19 @@ use crate::AppState;
 const RECENT_XP_LIMIT: usize = 20;
 
 /// Sentinel value for `pet_id` indicating "aggregate across every
-/// pet in the library" (the ALL PETS sidebar tile). Distinct from
-/// `None` which still means "use the currently-active pet". Any real
-/// pet id is a UUID, so a literal `__all__` cannot collide.
-pub const ALL_PETS_SCOPE: &str = "__all__";
+/// pet AND every historically-imported event on this machine"
+/// (the "All" sidebar tile). Distinct from `None` which still
+/// means "use the currently-active pet". Any real pet id is a UUID,
+/// so a literal `__all__` cannot collide.
+///
+/// Post-Phase-2: this view also surfaces `usage_event` rows that
+/// have no matching `xp_event` (events imported from JSONL files
+/// pre-installation or during offline gaps). The queries that back
+/// this scope live in `db::stats_summary` and `db::stats_for_provider`
+/// — both `FROM usage_event` with no `INNER JOIN xp_event`, so
+/// historical-only rows surface naturally.
+pub const ALL_SCOPE: &str = "__all__";
+
 
 #[derive(Serialize)]
 pub struct DashboardData {
@@ -264,7 +273,7 @@ pub async fn dashboard_provider_detail(
     // ALL PETS aggregate drill-down — use the library-wide query
     // variants (no xp_event join) so the chips, by-day chart, and
     // request list all reflect every pet's activity.
-    if pet_id.as_deref() == Some(ALL_PETS_SCOPE) {
+    if pet_id.as_deref() == Some(ALL_SCOPE) {
         return build_provider_detail_all_pets(&state.db, &provider)
             .await
             .map_err(|e| e.to_string());
@@ -400,7 +409,7 @@ pub async fn dashboard_provider_requests_page(
 ) -> Result<ProviderRequestsPage, String> {
     // ALL PETS path — page across every pet's usage events, not a
     // single pet's xp_event join.
-    if pet_id.as_deref() == Some(ALL_PETS_SCOPE) {
+    if pet_id.as_deref() == Some(ALL_SCOPE) {
         let rows = state
             .db
             .recent_usage_for_provider_before(
@@ -611,7 +620,7 @@ async fn build_dashboard(
     // ALL PETS aggregate path — sidebar's special tile passes the
     // `__all__` sentinel; we short-circuit to a library-wide build
     // that doesn't reference any single pet.
-    if pet_id == Some(ALL_PETS_SCOPE) {
+    if pet_id == Some(ALL_SCOPE) {
         return build_dashboard_all_pets(db).await.map(Some);
     }
 
@@ -765,7 +774,7 @@ async fn build_dashboard(
 }
 
 /// ALL PETS aggregate build — fired when the caller passes
-/// `ALL_PETS_SCOPE`. Produces the same `DashboardData` shape with
+/// `ALL_SCOPE`. Produces the same `DashboardData` shape with
 /// `pet: None` and the `aggregate` field populated; the frontend
 /// renders an alternative identity row keyed on `pet.is_none()`.
 ///
