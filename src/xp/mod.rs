@@ -29,6 +29,7 @@ pub mod cost_query;
 pub mod engine;
 pub mod heuristic;
 pub mod pricing;
+pub mod registry;
 pub mod resolver;
 pub mod scorer;
 pub mod state;
