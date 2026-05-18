@@ -1281,29 +1281,53 @@ async fn spawn_ingestion(
     // ─── Cursor poller (drives hover info popup) ────────────────────────
     spawn_cursor_poller(app.clone());
 
-    // ─── Usage path: Layer 2 providers → DB + frontend ──────────────────
-    let (raw_tx, mut raw_rx) = mpsc::channel::<UsageEvent>(8192);
+    // ─── Usage ingestion: TWO independent lanes ─────────────────────────
+    //
+    // Phase 2 introduces dual ingestion lanes that route to the same DB
+    // writer but differ on what else they trigger downstream:
+    //
+    //   live_tx    (this PR — renamed from `raw_tx`) — full fan-out:
+    //              ① emit "usage://event" to frontend  (live UI react)
+    //              ② xp.ingest_usage  (grants XP to active pet)
+    //              ③ db_tx → writer   (persists usage_event)
+    //
+    //   history_tx (B3 will add) — DB-only relay:
+    //              ③ db_tx → writer
+    //              Used for historical import flowing into the
+    //              Dashboard's "All" view, never granting XP. The
+    //              isolation lets `Provider::import_historical()` emit
+    //              events without retroactively crediting any pet.
+    //
+    // Two senders share one db_writer (cloned `db_tx`) so the DB layer
+    // stays single-writer + serialized via WAL.
+    let (live_tx, mut live_rx) = mpsc::channel::<UsageEvent>(8192);
     let (db_tx, db_rx) = mpsc::channel::<UsageEvent>(8192);
     let writer = spawn_writer(db.clone(), db_rx, shutdown.clone());
 
+    // Live fan-out: events from `Provider::watch()` → XP + DB + frontend.
+    // History lane (B3) will share `db_tx` via a separate relay task.
     let fan_app = app.clone();
     let fan_shutdown = shutdown.clone();
     let fan_xp = xp.clone();
+    let live_db_tx = db_tx.clone();
     tokio::spawn(async move {
         loop {
             tokio::select! {
                 _ = fan_shutdown.cancelled() => break,
-                maybe = raw_rx.recv() => match maybe {
+                maybe = live_rx.recv() => match maybe {
                     Some(ev) => {
                         let _ = fan_app.emit("usage://event", &ev);
-                        // Feed XP engine — token-based growth
+                        // Feed XP engine — token-based growth, gated on
+                        // active pet (XPEngine::ingest_usage returns
+                        // None when no active pet, so this is safe even
+                        // before the user has hatched).
                         match fan_xp.ingest_usage(&ev).await {
                             Ok(Some(update)) => emit_pet_state(&fan_app, &update),
                             Ok(None) => {}
                             Err(e) => tracing::warn!(error = %e, "xp ingest_usage failed"),
                         }
-                        if db_tx.send(ev).await.is_err() {
-                            tracing::error!("db channel closed");
+                        if live_db_tx.send(ev).await.is_err() {
+                            tracing::error!("live → db channel closed");
                             break;
                         }
                     }
@@ -1313,7 +1337,11 @@ async fn spawn_ingestion(
         }
     });
 
-    let sink = EventSink::new(raw_tx);
+    // `db_tx` (the original) lives until spawn_ingestion returns;
+    // B3 will add `let history_db_tx = db_tx.clone()` before that
+    // point to give the history relay its own sender clone.
+
+    let live_sink = EventSink::new(live_tx);
     let providers: Vec<Box<dyn Provider>> = vec![
         Box::new(ClaudeCodeProvider::new(db.clone())),
         Box::new(CodexProvider::new(db.clone())),
@@ -1357,7 +1385,7 @@ async fn spawn_ingestion(
 
     let mut handles = Vec::new();
     for p in providers {
-        let sink = sink.clone();
+        let sink = live_sink.clone();
         let act_sink = provider_activity_sink.clone();
         let token = shutdown.clone();
         handles.push(tokio::spawn(async move {
@@ -1367,7 +1395,7 @@ async fn spawn_ingestion(
             }
         }));
     }
-    drop(sink);
+    drop(live_sink);
     drop(provider_activity_sink);
 
     // ─── Activity path: Layer 1 hook server → frontend (no DB) ──────────
