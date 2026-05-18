@@ -18,6 +18,7 @@
 
 import { useEffect, useState } from "react";
 import { invoke, convertFileSrc } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { Pet } from "./Pet";
 import "./Dashboard.css";
 
@@ -158,6 +159,19 @@ type View =
       eventsTotal: number;
     };
 
+/// Aggregated running totals + completion flag for the Phase 2
+/// historical-import task. Backend emits `history://provider_done`
+/// per provider + `history://complete` at the end; this struct
+/// accumulates totals across all providers.
+interface ImportStatus {
+  totalEvents: number;
+  totalFiles: number;
+  done: boolean;
+  /// Millisecond timestamp when `history://complete` fired. Used to
+  /// auto-dismiss the banner ~4s after completion.
+  doneAt?: number;
+}
+
 /// Sidebar entry — one per pet. Same data shape that PetSwitcher uses
 /// via `pet_list_summaries`. Re-declared locally so the Dashboard's
 /// type chain doesn't reach into PetSwitcher.
@@ -188,6 +202,13 @@ export function Dashboard({ onClose }: Props) {
   // button context-sensitive — drill-down's Back returns to overview,
   // overview's Back closes the dashboard entirely.
   const [view, setView] = useState<View>({ kind: "overview" });
+  // Phase 2 import progress. `null` = no import in flight; otherwise
+  // tracks running totals from `history://*` Tauri events emitted by
+  // `spawn_ingestion`'s historical-import task.
+  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null);
+  // Bump to force `dashboard_data` re-fetch (used when import
+  // completes so newly-imported events surface immediately).
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // 1. Load the pet sidebar (one tile per pet). The pet flagged as
   //    `is_active` becomes the default selection so the dashboard
@@ -214,14 +235,20 @@ export function Dashboard({ onClose }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 2. Whenever the selected pet changes, fetch THAT pet's dashboard.
-  //    Reset any in-flight drill-down — provider / requests views
+  // 2. Whenever the selected pet changes (OR an historical import
+  //    finishes — `refreshKey` bumps), fetch THAT pet's dashboard.
+  //    Resets any in-flight drill-down — provider / requests views
   //    were scoped to the previous pet's data.
   useEffect(() => {
     if (!selectedPetId) return;
     let cancelled = false;
-    setData(null);
-    setView({ kind: "overview" });
+    // Only blank the panel on a true pet-switch, not on a silent
+    // post-import refresh (keeps the current view stable during
+    // background updates).
+    if (refreshKey === 0) {
+      setData(null);
+      setView({ kind: "overview" });
+    }
     invoke<DashboardData | null>("dashboard_data", { petId: selectedPetId })
       .then((d) => {
         if (cancelled) return;
@@ -237,7 +264,77 @@ export function Dashboard({ onClose }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [selectedPetId]);
+  }, [selectedPetId, refreshKey]);
+
+  // 3. Subscribe to historical-import progress events emitted by
+  //    `spawn_ingestion`'s background task. Banner state updates as
+  //    each provider finishes; on `history://complete` we bump
+  //    `refreshKey` so the dashboard re-fetches with the freshly-
+  //    imported events.
+  useEffect(() => {
+    let unlistenStart: UnlistenFn | undefined;
+    let unlistenDone: UnlistenFn | undefined;
+    let unlistenComplete: UnlistenFn | undefined;
+    let unlistenError: UnlistenFn | undefined;
+
+    listen<{ provider: string }>("history://provider_start", () => {
+      setImportStatus((prev) =>
+        prev ?? { totalEvents: 0, totalFiles: 0, done: false }
+      );
+    }).then((fn) => (unlistenStart = fn));
+
+    listen<{ provider: string; events: number; files: number; elapsed_ms: number }>(
+      "history://provider_done",
+      (ev) => {
+        setImportStatus((prev) => ({
+          totalEvents: (prev?.totalEvents ?? 0) + ev.payload.events,
+          totalFiles: (prev?.totalFiles ?? 0) + ev.payload.files,
+          done: false,
+        }));
+      }
+    ).then((fn) => (unlistenDone = fn));
+
+    listen<{ provider: string; error: string }>(
+      "history://provider_error",
+      (ev) => {
+        // Don't dismiss the banner; surface a non-blocking note via
+        // `tracing` on the backend already. UI can keep accumulating
+        // successful providers' counts.
+        console.warn(
+          `historical import failed for ${ev.payload.provider}: ${ev.payload.error}`
+        );
+      }
+    ).then((fn) => (unlistenError = fn));
+
+    listen<{ total_events: number; total_files: number; elapsed_ms: number }>(
+      "history://complete",
+      (ev) => {
+        setImportStatus({
+          totalEvents: ev.payload.total_events,
+          totalFiles: ev.payload.total_files,
+          done: true,
+          doneAt: Date.now(),
+        });
+        // Trigger silent dashboard re-fetch so imported events appear.
+        setRefreshKey((k) => k + 1);
+        // Auto-dismiss banner after 4s.
+        setTimeout(() => {
+          setImportStatus((prev) =>
+            // Only dismiss if it's still the same "done" banner we set.
+            // (Defends against a second import starting while waiting.)
+            prev && prev.done ? null : prev
+          );
+        }, 4000);
+      }
+    ).then((fn) => (unlistenComplete = fn));
+
+    return () => {
+      unlistenStart?.();
+      unlistenDone?.();
+      unlistenComplete?.();
+      unlistenError?.();
+    };
+  }, []);
 
   // Error pane — keep the sidebar visible so the user can switch to
   // a working pet rather than dead-ending into a generic error page.
@@ -307,6 +404,7 @@ export function Dashboard({ onClose }: Props) {
         <div className="dash-main">
           <div className="gba-title">TRAINER CARD</div>
 
+          {importStatus && <ImportBanner status={importStatus} />}
           {error && <div className="picker-error">⚠ {error}</div>}
           {!data && !error && <div className="dash-loading">Loading…</div>}
 
@@ -775,6 +873,58 @@ function fmtXpCompact(n: number): string {
 }
 
 // ─── Moves (recent activity battle-log) ────────────────────────────
+
+// ─── Import progress banner ────────────────────────────────────────
+//
+// Surfaces the Phase 2 historical-import task to the user. Two states:
+//
+//   In progress  ⏳  "Scanning history… 1,234 events from 56 files"
+//   Done (4s)    ✓  "Imported 1,234 events from 56 files"
+//
+// Backend (desktop/src-tauri/src/lib.rs::spawn_ingestion) emits
+// `history://provider_done` per provider and `history://complete` at
+// the end. This banner stays visible 4s after `complete` to give the
+// user a chance to read the totals, then auto-dismisses.
+//
+// The banner never blocks user interaction — purely informational.
+// The dashboard data behind it refreshes automatically (refreshKey
+// bump in the listen handler) so newly-imported rows appear without
+// a manual reload.
+function ImportBanner({ status }: { status: ImportStatus }) {
+  const events = status.totalEvents.toLocaleString();
+  const files = status.totalFiles.toLocaleString();
+  return (
+    <div
+      className={`dash-import-banner ${status.done ? "is-done" : "is-active"}`}
+      role="status"
+      aria-live="polite"
+    >
+      {status.done ? (
+        <>
+          <span className="dash-import-banner-icon">✓</span>
+          <span>
+            Imported {events} event{status.totalEvents === 1 ? "" : "s"} from{" "}
+            {files} file{status.totalFiles === 1 ? "" : "s"}
+          </span>
+        </>
+      ) : (
+        <>
+          <span className="dash-import-banner-icon">⏳</span>
+          <span>
+            Scanning history…
+            {status.totalEvents > 0 && (
+              <>
+                {" "}
+                {events} event{status.totalEvents === 1 ? "" : "s"}
+                {status.totalFiles > 0 && ` from ${files} files`}
+              </>
+            )}
+          </span>
+        </>
+      )}
+    </div>
+  );
+}
 
 function MovesSection({ recent }: { recent: RecentXp[] }) {
   // `dash-section-grow` makes this section the flex stretcher inside
