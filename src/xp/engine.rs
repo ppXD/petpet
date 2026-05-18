@@ -352,7 +352,16 @@ impl XPEngine {
     pub async fn ingest_usage(&self, ue: &UsageEvent) -> Result<Option<PetStateUpdate>> {
         let guard = self.active.read().await;
         let Some(active) = guard.as_ref() else { return Ok(None) };
-        let Some(comp) = active.calculator.score_usage(ue) else { return Ok(None) };
+        // Fetch the pet's level BEFORE this event for the algorithm's
+        // growth curve. Falls back to 0 for brand-new pets with no
+        // state row yet.
+        let pet_level = self
+            .db
+            .get_pet_state(&active.pet.id)
+            .await?
+            .map(|s| active.levels().current_level(s.total_xp))
+            .unwrap_or(0);
+        let Some(comp) = active.calculator.score_usage(ue, pet_level) else { return Ok(None) };
         let rec = XpEventRecord::new(
             &active.pet.id,
             XpSourceType::Usage,

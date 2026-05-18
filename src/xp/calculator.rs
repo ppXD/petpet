@@ -19,11 +19,14 @@ impl XPCalculator {
         Self { rules }
     }
 
-    pub fn score_usage(&self, ue: &UsageEvent) -> Option<XpComputation> {
+    /// Score a usage event. `pet_level` is the pet's current level
+    /// BEFORE applying this event (so events emit deterministic XP
+    /// regardless of ordering within a session).
+    pub fn score_usage(&self, ue: &UsageEvent, pet_level: u32) -> Option<XpComputation> {
         let ident = ModelIdent::parse(&ue.model);
         let ctx = MatchContext::from_usage(ue, &ident);
         let rule = self.rules.resolve(XpSourceType::Usage, &ctx)?;
-        UsageScorer::score(ue, rule)
+        UsageScorer::score(ue, &ident, rule, pet_level)
     }
 
     pub fn score_activity(&self, ae: &ActivityEvent) -> Option<XpComputation> {
