@@ -1,0 +1,79 @@
+# GitHub's native auto-generated release notes config.
+# Activated by `gh api repos/.../releases/generate-notes` (used in
+# `.github/workflows/release.yml`) and by the "Generate release notes"
+# button in the Releases UI.
+#
+# Behaviour:
+#   - PRs merged between the previous release tag and this one get
+#     grouped into the categories below based on their labels.
+#   - First matching category wins (top-to-bottom).
+#   - Labels in `exclude.labels` keep PRs out of the notes entirely
+#     (use for accidental noise / duplicate PRs / "this doesn't need
+#     mentioning"-style chores).
+#   - Each release ends with a `**Full Changelog**:` link from the
+#     previous tag to this one. We don't override that.
+#
+# How labels get applied:
+#   - PR opens → `.github/workflows/auto-label.yml` labels it based on
+#     the source branch prefix (`feat/*` → feature, `fix/*` → fix,
+#     `ci/*` → ci, `data/*` → data, `ui/*` → ui).
+#   - Maintainer can also apply labels manually before merge.
+
+changelog:
+  exclude:
+    labels:
+      - ignore-for-release
+      - duplicate
+      - invalid
+      - wontfix
+
+  categories:
+    - title: ✨ Features
+      labels:
+        - feature
+        - enhancement
+
+    - title: 🐛 Bug Fixes
+      labels:
+        - bug
+        - fix
+
+    - title: 🎨 UI / UX
+      labels:
+        - ui
+        - ux
+        - design
+
+    - title: ⚙️ Internals
+      labels:
+        - refactor
+        - chore
+        - internal
+
+    - title: 📦 Data / Registry
+      labels:
+        - data
+        - registry
+
+    - title: 🚀 CI / Build
+      labels:
+        - ci
+        - build
+        - release
+
+    - title: 📝 Documentation
+      labels:
+        - docs
+        - documentation
+
+    - title: 🔁 Dependencies
+      labels:
+        - dependencies
+        - deps
+
+    # Catch-all — anything without one of the labels above. New
+    # contributors won't have labels set up; this keeps their work
+    # visible while encouraging label adoption.
+    - title: Other Changes
+      labels:
+        - "*"

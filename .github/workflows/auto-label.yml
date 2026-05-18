@@ -1,0 +1,82 @@
+name: auto-label
+
+# Apply a release-category label to every opened PR based on its
+# source-branch prefix, matching the categories in
+# `.github/release.yml`. Lets `generate-notes` group PRs into the
+# right section automatically.
+#
+# Branch-naming convention (already used throughout this repo):
+#   feat/*    → feature
+#   fix/*     → fix
+#   ci/*      → ci
+#   data/*    → data
+#   ui/*      → ui
+#   chore/*   → chore
+#   docs/*    → docs
+#   refactor/*→ refactor
+#   xp/*      → feature      (Phase work; map to feature for notes)
+#
+# The auto-label is additive — maintainers can still apply manual
+# labels (`bug`, `dependencies`, etc.) which `generate-notes` honours
+# first via the order in `.github/release.yml`.
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Apply label from branch prefix
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BRANCH: ${{ github.head_ref }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          # Pick a label by prefix. First match wins.
+          case "$BRANCH" in
+            feat/*)     LABEL="feature"  ;;
+            fix/*)      LABEL="fix"      ;;
+            ci/*)       LABEL="ci"       ;;
+            release/*)  LABEL="release"  ;;
+            data/*)     LABEL="data"     ;;
+            ui/*)       LABEL="ui"       ;;
+            chore/*)    LABEL="chore"    ;;
+            docs/*)     LABEL="docs"     ;;
+            refactor/*) LABEL="refactor" ;;
+            xp/*)       LABEL="feature"  ;;  # Phase work → "feature"
+            *)          LABEL=""         ;;
+          esac
+
+          if [ -z "$LABEL" ]; then
+            echo "Branch '$BRANCH' doesn't match any known prefix — skipping auto-label."
+            exit 0
+          fi
+
+          # Create the label idempotently. If it already exists, this is
+          # a no-op error we swallow. Colour assignments are static and
+          # match the `.github/release.yml` category visual cues.
+          declare -A COLORS
+          COLORS[feature]=a2eeef
+          COLORS[fix]=d73a4a
+          COLORS[ci]=fef2c0
+          COLORS[release]=0e8a16
+          COLORS[data]=c5def5
+          COLORS[ui]=d4c5f9
+          COLORS[chore]=cccccc
+          COLORS[docs]=0075ca
+          COLORS[refactor]=fbca04
+          gh label create "$LABEL" --color "${COLORS[$LABEL]:-cccccc}" \
+            --description "Auto-applied by .github/workflows/auto-label.yml" \
+            --repo "$REPO" 2>/dev/null || true
+
+          echo "Applying label '$LABEL' to PR #$PR (branch: $BRANCH)"
+          gh pr edit "$PR" --repo "$REPO" --add-label "$LABEL"
