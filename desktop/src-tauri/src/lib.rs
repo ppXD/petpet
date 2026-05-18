@@ -1337,11 +1337,47 @@ async fn spawn_ingestion(
         }
     });
 
-    // `db_tx` (the original) lives until spawn_ingestion returns;
-    // B3 will add `let history_db_tx = db_tx.clone()` before that
-    // point to give the history relay its own sender clone.
+    // ─── History lane (Phase 2 B3) ───────────────────────────────────────
+    //
+    // Drives the Dashboard's "All" view by importing pre-install + offline-
+    // gap activity into `usage_event` WITHOUT going through the XP engine.
+    //
+    // Why this matters: a user installing petpet on a fresh Mac that has
+    // months of Claude Code session JSONLs on disk would otherwise see
+    // an empty dashboard. The live lane snaps cursors to EOF so XP is
+    // never back-credited; this lane catches up via the parallel
+    // `file_cursor_history` table introduced in B1.
+    //
+    // The relay task here is a thin forwarder: history_rx → db_tx.
+    // No frontend emit, no XP ingest — strictly persistence. Sharing one
+    // db_writer keeps SQLite at single-writer / WAL semantics.
+    let (history_tx, mut history_rx) = mpsc::channel::<UsageEvent>(8192);
+    let history_db_tx = db_tx.clone();
+    let history_shutdown = shutdown.clone();
+    tokio::spawn(async move {
+        loop {
+            tokio::select! {
+                _ = history_shutdown.cancelled() => break,
+                maybe = history_rx.recv() => match maybe {
+                    Some(ev) => {
+                        if history_db_tx.send(ev).await.is_err() {
+                            tracing::error!("history → db channel closed");
+                            break;
+                        }
+                    }
+                    None => break,
+                }
+            }
+        }
+    });
+
+    // Original `db_tx` was the only un-cloned reference; both relay tasks
+    // now own a clone, so we can drop the original here. The db_writer
+    // exits cleanly when both relays finish (cancellation token cascades).
+    drop(db_tx);
 
     let live_sink = EventSink::new(live_tx);
+    let history_sink = EventSink::new(history_tx);
     let providers: Vec<Box<dyn Provider>> = vec![
         Box::new(ClaudeCodeProvider::new(db.clone())),
         Box::new(CodexProvider::new(db.clone())),
@@ -1351,6 +1387,83 @@ async fn spawn_ingestion(
         // otherwise, no files created speculatively. See provider/aider.rs.
         Box::new(AiderProvider::new(db.clone())),
     ];
+
+    // Spawn historical import task BEFORE the live watch loops so the
+    // Dashboard's "All" view can populate quickly on app open. The task
+    // is fire-and-forget — failures log and don't block startup. Uses
+    // its own provider instances (each owns its `DbHandle` clone), so
+    // there's no contention with the live-tail providers below.
+    let history_providers: Vec<Box<dyn Provider>> = vec![
+        Box::new(ClaudeCodeProvider::new(db.clone())),
+        Box::new(CodexProvider::new(db.clone())),
+        Box::new(OpenCodeProvider::new(db.clone())),
+        Box::new(AiderProvider::new(db.clone())),
+    ];
+    let history_sink_for_task = history_sink.clone();
+    let history_import_app = app.clone();
+    tokio::spawn(async move {
+        let started = std::time::Instant::now();
+        let mut total_events = 0u64;
+        let mut total_files = 0u64;
+        for p in history_providers {
+            let pid = p.id();
+            // Emit a per-provider "start" so the dashboard can show a
+            // chip ("Importing Claude Code history…").
+            let _ = history_import_app.emit(
+                "history://provider_start",
+                serde_json::json!({ "provider": pid.as_str() }),
+            );
+            match p.import_historical(&history_sink_for_task).await {
+                Ok(stats) => {
+                    total_events += stats.events_emitted;
+                    total_files += stats.files_scanned;
+                    let _ = history_import_app.emit(
+                        "history://provider_done",
+                        serde_json::json!({
+                            "provider": pid.as_str(),
+                            "events": stats.events_emitted,
+                            "files": stats.files_scanned,
+                            "elapsed_ms": stats.duration.as_millis() as u64,
+                        }),
+                    );
+                }
+                Err(e) => {
+                    tracing::warn!(
+                        provider = %pid,
+                        error = %e,
+                        "historical import failed (non-fatal — bundled live tail still works)"
+                    );
+                    let _ = history_import_app.emit(
+                        "history://provider_error",
+                        serde_json::json!({
+                            "provider": pid.as_str(),
+                            "error": e.to_string(),
+                        }),
+                    );
+                }
+            }
+        }
+        tracing::info!(
+            total_events,
+            total_files,
+            elapsed_ms = started.elapsed().as_millis() as u64,
+            "historical import complete (all providers)"
+        );
+        let _ = history_import_app.emit(
+            "history://complete",
+            serde_json::json!({
+                "total_events": total_events,
+                "total_files": total_files,
+                "elapsed_ms": started.elapsed().as_millis() as u64,
+            }),
+        );
+        // history_sink_for_task drops here → if no other clone exists,
+        // history_tx closes, history relay drains the rest then exits.
+        drop(history_sink_for_task);
+    });
+    // Drop the local handle; only the spawn-task's clone keeps the
+    // channel alive for the duration of the import.
+    drop(history_sink);
 
     // Build the ActivitySink that we'll route into for log-derived events.
     // We construct it INSIDE the provider loop so providers feed the same
