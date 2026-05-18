@@ -93,7 +93,11 @@ impl ModelIdent {
     }
 }
 
-fn normalize(raw: &str) -> String {
+/// Canonical normalization applied by `ModelIdent::parse`. Exposed as
+/// `pub` so [`crate::xp::registry::Registry::lookup`] can call it
+/// directly without re-entering `ModelIdent::parse` (which would
+/// otherwise recurse through `identify_tier` → registry lookup → here).
+pub fn normalize(raw: &str) -> String {
     let mut s = raw.trim().to_ascii_lowercase();
 
     // 1. Strip recognised vendor prefix (e.g. "anthropic/claude-opus-4-7")
@@ -204,8 +208,16 @@ fn identify_vendor(family: &str, normalized: &str) -> Vendor {
 }
 
 fn identify_tier(normalized: &str, family: &str) -> Tier {
-    // Mini takes precedence. Use dash-segments as word boundaries so
-    // "gemini" doesn't get caught by the "mini" substring scan.
+    // 1. Registry is authoritative for any model in data/models.json,
+    //    including free-tier suffix markers (`-free` → Mini).
+    if let Some(entry) = crate::xp::registry::Registry::bundled().lookup(normalized) {
+        return entry.tier;
+    }
+
+    // 2. Not in registry — fall back to the hardcoded heuristic so
+    //    existing pets keep classifying never-seen-before models the
+    //    same way they did pre-migration. Phase 2b-4 collapses this
+    //    into `heuristic::fallback_tier` at scoring time.
     let segs: Vec<&str> = normalized.split('-').collect();
     if segs.iter().any(|s| matches!(*s, "mini" | "nano"))
         || normalized.contains("flash-lite")
@@ -362,14 +374,22 @@ mod tests {
     /// Fixture: every distinct model string we've actually observed on
     /// the user's machine — guards against regressions when normalize
     /// rules change.
+    ///
+    /// `tier` values reflect what the Registry resolves (data/models.json
+    /// — Phase 2b-3 onwards). Free-tier suffixed models resolve to the
+    /// free marker's `mini` tier; plain `gemini-*-flash` is classified
+    /// as Mini per Gemini's small-model pricing (vs Pro tier).
     #[test]
     fn observed_models_normalize_stably() {
         let observed = [
             // From this user's DB (May 2026)
             ("claude-opus-4-7",        "claude-opus-4-7",  "claude-opus",   Vendor::Anthropic, Tier::Frontier),
-            ("deepseek-v4-flash-free", "deepseek-v4-flash-free", "deepseek-v4", Vendor::DeepSeek, Tier::Unknown),
+            // Free marker classifies these as Mini (free models are
+            // structurally small/cheap; registry's _free_tier_suffix
+            // marker fires before the vendor family entry).
+            ("deepseek-v4-flash-free", "deepseek-v4-flash-free", "deepseek-v4", Vendor::DeepSeek, Tier::Mini),
             ("gpt-5.5",                "gpt-5-5",          "gpt-5",         Vendor::OpenAI,    Tier::Frontier),
-            ("qwen3.6-plus-free",      "qwen3-6-plus-free", "qwen3",       Vendor::Alibaba,   Tier::Unknown),
+            ("qwen3.6-plus-free",      "qwen3-6-plus-free", "qwen3",       Vendor::Alibaba,   Tier::Mini),
             // Other plausible models the parser MUST handle
             ("claude-haiku-4-5-20251001", "claude-haiku-4-5", "claude-haiku", Vendor::Anthropic, Tier::Mini),
             ("claude-opus-4-6",        "claude-opus-4-6",  "claude-opus",   Vendor::Anthropic, Tier::Frontier),
@@ -383,7 +403,10 @@ mod tests {
             ("o1",                     "o1",               "o1",            Vendor::OpenAI,    Tier::Frontier),
             ("o3",                     "o3",               "o3",            Vendor::OpenAI,    Tier::Frontier),
             ("o1-mini",                "o1-mini",          "o1",            Vendor::OpenAI,    Tier::Mini),
-            ("gemini-2-0-flash",       "gemini-2-0-flash", "gemini-2",      Vendor::Google,    Tier::Mid),
+            // Registry classifies gemini-2.0-flash as Mini (small-model
+            // tier per pricing $0.10/$0.40), not Mid — the hardcoded
+            // model.rs heuristic only caught `flash-lite`, missing this.
+            ("gemini-2-0-flash",       "gemini-2-0-flash", "gemini-2",      Vendor::Google,    Tier::Mini),
             ("anthropic/claude-opus-4-7", "claude-opus-4-7","claude-opus",  Vendor::Anthropic, Tier::Frontier),
             ("openai/gpt-5.5",         "gpt-5-5",          "gpt-5",         Vendor::OpenAI,    Tier::Frontier),
         ];
