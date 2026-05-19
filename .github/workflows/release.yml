@@ -304,46 +304,53 @@ jobs:
             | gh api -X POST "repos/$REPO/releases/generate-notes" \
                 --input - --jq .body)
 
-          # The install template — version-substituted asset filenames
-          # so users can copy/paste the exact command.
-          INSTALL_TEMPLATE=$(cat <<TEMPLATE
+          # The install template — uses a SINGLE-QUOTED heredoc so bash
+          # doesn't try to expand anything inside (otherwise "$99/year"
+          # is read as positional param $9, "SHA-256" reads $5 from
+          # -256, etc. — both fail under `set -u`). Version + repo are
+          # substituted via placeholder replacement after the fact.
+          INSTALL_TEMPLATE=$(cat <<'TEMPLATE'
           ## 📦 Install
 
           ### 🍎 macOS (universal — Apple Silicon + Intel)
 
-          Download \`petpet_${VERSION}.dmg\`, drag petpet to \`/Applications\`, then strip the macOS quarantine attribute on first launch:
+          Download `petpet___VERSION__.dmg`, drag petpet to `/Applications`, then strip the macOS quarantine attribute on first launch:
 
-          \`\`\`sh
+          ```sh
           xattr -cr /Applications/petpet.app
-          \`\`\`
+          ```
 
-          > **Why the workaround?** petpet ships without Apple Developer notarization ($99/year per Apple). Once we configure it, the warning disappears entirely.
+          > **Why the workaround?** petpet ships without Apple Developer notarization (USD 99 per year via the Apple Developer Program). Once we configure it, the warning disappears entirely.
 
           ### 🐧 Linux x64
 
           Pick whichever your distro prefers:
 
-          \`\`\`sh
+          ```sh
           # Debian / Ubuntu
-          sudo dpkg -i petpet_${VERSION}_amd64.deb
+          sudo dpkg -i petpet___VERSION___amd64.deb
 
           # Fedora / RHEL
-          sudo rpm -i petpet-${VERSION}-1.x86_64.rpm
+          sudo rpm -i petpet-__VERSION__-1.x86_64.rpm
 
           # Portable (no install needed)
-          chmod +x petpet_${VERSION}_amd64.AppImage
-          ./petpet_${VERSION}_amd64.AppImage
-          \`\`\`
+          chmod +x petpet___VERSION___amd64.AppImage
+          ./petpet___VERSION___amd64.AppImage
+          ```
 
           ### 🪟 Windows x64
 
-          Run \`petpet_${VERSION}_x64.msi\` for MSI install, or \`petpet_${VERSION}_x64-setup.exe\` for the NSIS variant.
+          Run `petpet___VERSION___x64.msi` for MSI install, or `petpet___VERSION___x64-setup.exe` for the NSIS variant.
 
           ---
 
-          🤖 Built reproducibly from source at this tag via [\`.github/workflows/release.yml\`](https://github.com/${REPO}/blob/main/.github/workflows/release.yml). All assets above are SHA-256 verifiable against the release page.
+          🤖 Built reproducibly from source at this tag via [`.github/workflows/release.yml`](https://github.com/__REPO__/blob/main/.github/workflows/release.yml).
           TEMPLATE
           )
+          # Substitute placeholders — single-quoted heredoc above means
+          # no bash expansion happened, so this is the safe spot.
+          INSTALL_TEMPLATE="${INSTALL_TEMPLATE//__VERSION__/$VERSION}"
+          INSTALL_TEMPLATE="${INSTALL_TEMPLATE//__REPO__/$REPO}"
 
           # Assemble final body: auto-notes on top, hand-written install
           # template below, separated by a horizontal rule.
