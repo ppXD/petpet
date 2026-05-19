@@ -19,12 +19,6 @@
 <br>
 
 <div align="center">
-  <img src="assets/screenshots/hero.png" alt="petpet — pick your starter, raise it for months" width="900">
-</div>
-
-<br>
-
-<div align="center">
 
 ### 🥚 Pick your egg
 
@@ -100,9 +94,11 @@ Every pet has **10 evolution stages** — egg → newborn → six juvenile / adu
 
 **The XP pipeline**
 
-<div align="center">
-  <img src="assets/screenshots/xp-pipeline.png" alt="XP pipeline: sources → algorithm → rule multiplier → XP" width="720">
-</div>
+```
+   Token usage   ┐
+   Activity     ─┼──→  Algorithm   ──→  Rule multiplier  ──→  XP
+   Manual grants┘     (invariant)       (per-template)
+```
 
 **Algorithm core** (`src/xp/algorithm.rs`, version-pinned, cross-install identical):
 
