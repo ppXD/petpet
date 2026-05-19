@@ -20,7 +20,7 @@
 
 <div align="center">
 
-### Download
+### 🥚 Pick your egg
 
 <a href="https://github.com/ppXD/petpet/releases/latest"><img alt="Download for macOS" src="https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
 &nbsp;
