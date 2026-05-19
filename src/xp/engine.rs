@@ -870,6 +870,31 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn pick_template_unicorn_loads_and_creates_pet() {
+        // Regression guard: no prior test exercised the unicorn
+        // template, so a broken levels.json (e.g. non-monotonic
+        // xp_required) would silently fail at load time — the picker
+        // would just show one fewer template. Sun was the only canary
+        // and didn't catch unicorn-specific issues. This test pins
+        // that the rebalance keeps unicorn loadable end-to-end.
+        let _g = ENGINE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_var("PETPET_HOME", dir.path());
+        let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
+            .await
+            .expect("open db");
+        let engine = XPEngine::open(db.clone()).await.expect("open engine");
+
+        let pet = engine
+            .pick_template("unicorn", Some("Sparkle".into()))
+            .await
+            .expect("unicorn should load and snapshot");
+
+        assert_eq!(pet.template_id, "unicorn");
+        assert_eq!(pet.name, "Sparkle");
+    }
+
+    #[tokio::test]
     async fn pick_template_unknown_errors() {
         let _g = env_test_lock();
         let dir = tempfile::tempdir().expect("tempdir");
