@@ -1,180 +1,209 @@
 <div align="center">
 
-<img src="desktop/src-tauri/icons/icon.png" width="128" alt="petpet logo">
+<img src="desktop/src-tauri/icons/icon.png" width="140" alt="petpet">
 
-# 真正的 AI 寵物養成
+<h1>Real AI Pet Raising</h1>
 
-### 你的 AI 用得越認真,牠長得越神氣 🐣 → 🦄
+<p><i>The harder you work your AI — the mightier your pet becomes.</i> 🐣 → 🦄</p>
 
-[![release](https://img.shields.io/github/v/release/ppXD/petpet?include_prereleases&label=release)](https://github.com/ppXD/petpet/releases/latest)
-[![macOS](https://img.shields.io/badge/macOS-Apple%20Silicon%20%2B%20Intel-black?logo=apple)](https://github.com/ppXD/petpet/releases/latest)
-[![Linux](https://img.shields.io/badge/Linux-x64-orange?logo=linux)](https://github.com/ppXD/petpet/releases/latest)
-[![Windows](https://img.shields.io/badge/Windows-x64-blue?logo=windows)](https://github.com/ppXD/petpet/releases/latest)
-[![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+<p>
+  <a href="https://github.com/ppXD/petpet/releases/latest"><img alt="release" src="https://img.shields.io/github/v/release/ppXD/petpet?include_prereleases&label=release"></a>
+  <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-MIT-green"></a>
+  <img alt="local-first" src="https://img.shields.io/badge/data-100%25%20local-success">
+</p>
 
 </div>
 
----
+<br>
 
-## 📦 安裝
+<div align="center">
 
-到 [**Releases**](https://github.com/ppXD/petpet/releases/latest) 抓一個:
+### Download
 
-| 平台 | 檔案 | 一行指令 |
-|---|---|---|
-| 🍎 macOS | `petpet_*.dmg` | 拖進 `/Applications`,首次啟動跑 `xattr -cr /Applications/petpet.app` |
-| 🐧 Debian / Ubuntu | `petpet_*_amd64.deb` | `sudo dpkg -i petpet_*_amd64.deb` |
-| 🐧 RHEL / Fedora | `petpet-*-1.x86_64.rpm` | `sudo rpm -i petpet-*-1.x86_64.rpm` |
-| 🐧 Portable | `petpet_*_amd64.AppImage` | `chmod +x petpet_*_amd64.AppImage && ./petpet_*_amd64.AppImage` |
-| 🪟 Windows | `petpet_*_x64.msi` | 雙擊安裝 |
+<a href="https://github.com/ppXD/petpet/releases/latest"><img alt="Download for macOS" src="https://img.shields.io/badge/Download-macOS-000000?style=for-the-badge&logo=apple&logoColor=white"></a>
+&nbsp;
+<a href="https://github.com/ppXD/petpet/releases/latest"><img alt="Download for Windows" src="https://img.shields.io/badge/Download-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white"></a>
+&nbsp;
+<a href="https://github.com/ppXD/petpet/releases/latest"><img alt="Download for Linux" src="https://img.shields.io/badge/Download-Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black"></a>
 
-> macOS 沒有 Apple Developer 簽章,首次 `xattr -cr` 清除 quarantine 即可。
+</div>
 
----
+<br>
 
-## 🐾 這是什麼?
+<details>
+<summary><b>Install commands</b> (click to expand)</summary>
 
-petpet 是一隻活在你桌面上的小寵物,**靜靜聽 Claude Code / Codex / OpenCode / Aider 的 token 流動**,然後把你「真的在用 AI 做事」這件事餵成牠的成長。
+```sh
+# 🍎 macOS — drag .dmg to /Applications, then clear quarantine on first launch:
+xattr -cr /Applications/petpet.app
 
-- **零侵入**:不需要改 hook,啟動就自動接管已有的 session log
-- **本地優先**:所有狀態存 `~/.petpet/`,沒有雲、沒有遙測
-- **跨 provider**:同一隻寵物吃多個 AI 工具的 events,XP 統一累積
+# 🪟 Windows — double-click the .msi (or _x64-setup.exe for the NSIS variant)
 
----
+# 🐧 Debian / Ubuntu
+sudo dpkg -i petpet_*_amd64.deb
 
-## 🦄 三個內建難度
+# 🐧 Fedora / RHEL
+sudo rpm -i petpet-*-1.x86_64.rpm
 
-| 模板 | 難度 | 默認名 | 大致破蛋時長 (Opus 4.7) | 滿級 L99 |
-|:---:|:---:|:---:|:---:|---:|
-| <img src="templates/builtin/unicorn/thumb.png" width="64"><br>**Unicorn** | 🟢 Easy | Sparkle | ~5-10 conv | 約 30 天 |
-| <img src="templates/builtin/sun/thumb.png" width="64"><br>**Sun (Wukong)** | 🟡 Medium | Wukong | ~15-20 conv | 約 60 天 |
-| <img src="templates/builtin/kingkong/thumb.png" width="64"><br>**KingKong** | 🔴 Hard | KingKong | ~30+ conv | 約 150 天 |
+# 🐧 Portable (any distro, no install)
+chmod +x petpet_*_amd64.AppImage && ./petpet_*_amd64.AppImage
+```
 
-**Hard 模式 (KingKong) 的設計哲學**: 閒聊不會餵食。只有 token 用量、task 完成、subagent 派遣 才會推進進度條。想養大這隻獸,你得真的在用 AI 做事。
+</details>
 
----
+<br>
 
-## 🔮 進化系統
+###  🐾 What is petpet?
 
-每隻寵物有 **10 個 stage** (蛋 → 幼形 → 成長 → 最終形態),用 token + 活動事件累積 XP 來推進。
+petpet is a desktop companion that quietly listens to **Claude Code / Codex / OpenCode / Aider** — and more providers landing soon — then turns your real AI usage into the pet's growth. Code seriously, your pet thrives. Idle, it sleeps.
+
+- 🔒 **Zero-risk, fully local.** No cloud, no telemetry, no account, no data ever leaves your machine. Open source, MIT-licensed, fully auditable.
+- 🪶 **Zero-setup.** No hook configuration. petpet auto-discovers existing session logs on launch.
+- 🤖 **Multi-agent.** One pet eats events from every supported AI coding tool; XP accumulates in a single pool.
+- 🗂️ **Multi-pet.** Raise a fleet — switch the active companion any time; the rest hold their state.
+
+<br>
+
+###  🦄 Three Built-in Difficulty Templates
+
+| | Template | Difficulty | Default name | Hatch (Opus 4.7) | L99 (heavy use) |
+|:---:|:---:|:---:|:---:|:---:|---:|
+| <img src="templates/builtin/unicorn/thumb.png" width="72"> | **Unicorn** | 🟢 Easy | Sparkle | ~5–10 conv | ~30 days |
+| <img src="templates/builtin/sun/thumb.png" width="72"> | **Sun (Wukong)** | 🟡 Medium | Wukong | ~15–20 conv | ~60 days |
+| <img src="templates/builtin/kingkong/thumb.png" width="72"> | **KingKong** | 🔴 Hard | KingKong | ~30+ conv | ~150 days |
+
+**Hard mode philosophy** — KingKong won't budge for idle chat. Only deliberate work counts: AI token usage, completed tasks, dispatched subagents. Want a titan? Earn it.
+
+<br>
+
+###  🔮 The Evolution Engine
+
+Every pet has **10 evolution stages** — egg → newborn → six juvenile / adult forms → final apex form. XP accrues from real-world events; level thresholds gate visual transformations.
 
 ```
    Stage 0       Stage 1         Stage 5         Stage 9
-     🥚    →     🐣      →   ✨ 中期形態 ✨ →    🌟 完全體 🌟
+     🥚    →     🐣      →   ✨ midform ✨  →   🌟 apex 🌟
      L0          L1              L40              L99
-   (egg)       (hatch)        (mid evolve)    (final form)
+   (egg)       (hatch)        (mid-evolution)   (final form)
 ```
 
-**XP 來源**:
-- 🪙 **Usage events** — 每個 LLM 回應、按 token 加權
-- 🎯 **Activity events** — `user_prompt` / `task_completed` / `subagent_stop` / `session_start`
-- 🔧 **Manual grants** — CLI 直接餵 XP (admin / debug)
-
-**算法核心**:`weighted_tokens / 60_000 × tier × confidence × growth_curve` → cap 後 × per-rule 多餘倍數 (見 [`src/xp/algorithm.rs`](src/xp/algorithm.rs))。
-
-**Tier (模型強度)**:
-- 🌌 **Frontier** (Opus, GPT-5, o1+): 1.5× 加成,單 event cap 10 XP
-- 🌙 **Mid** (Sonnet, GPT-4o, Gemini): 1.0×, cap 6 XP
-- 🐰 **Mini** (Haiku, mini, nano): 0.7×, cap 3 XP
-
-**Growth curve**: 高等級 XP 自然遞減 (`1 / (1 + 0.02 × level)`),防止高活躍用戶秒滿級。
-
----
-
-## 🐕‍🦺 多寵物 + 自訂模板
-
-### 一台機器養多隻
-
-切換 active 寵物隨時來。Active 寵物吃所有 live events,其他寵物保留 snapshot 不受影響。
-
-### 自製寵物模板
-
-內建的 **Template Creator** 讓你 3 分鐘做出一隻完全自訂的寵物:
-
-1. 選一個 **levels preset** (short / medium / long curve)
-2. 選 **stages preset** (simple 5-stage / balanced 7-stage / extended 10-stage)
-3. 自訂:
-   - 名字 + 描述 + flavor text
-   - 10 個 stage 的 sprite 圖 (PNG, 拖進去就好)
-   - Rules (每個 event type 給多少 XP, 哪個模型加成)
-   - 主題色 + label chips
-
-寵物模板存在 `~/.petpet/templates/<id>/`,純 JSON + PNG。可手 edit,可 git 管理,可分享給朋友。
-
----
-
-## 📊 Dashboard
-
-點寵物 → 開 Dashboard 看完整使用統計:
-
-- 💰 **Feeding Bill** — 今日 / 本週 / 本月 / 終身的 USD 花費 + token 消耗
-- 📈 **Per-day chart** — 30 天柱狀圖,看趨勢
-- 🤖 **Per-model breakdown** — 每個模型用了多少 token、花了多少錢
-- 📜 **Recent moves** — 寵物最近的 XP 紀錄,每筆都標記來源 (usage / activity / manual)
-- ⏮️ **All / Just this pet 切換** — `All` 涵蓋安裝前就存在的歷史 session,作為「考古」視圖
-
-Dashboard 自動同步:啟動 app 時觸發 historical import 把過去的 JSONL session 全部讀入 (不會給 active pet 加 XP, 純展示)。
-
----
-
-## 📦 寵物 / 模板 匯出與匯入
-
-把整隻寵物 (含 snapshot, XP 紀錄, 自訂名字) 或整個模板打包成 `.petpet` 壓縮檔,丟到 USB / Discord / GitHub Release,別人 import 後接著養。
+**The XP pipeline**
 
 ```
-Settings → Export Pet      → 產出 .petpet 檔
-Settings → Export Template → 只打包 template 本體,不含 instance state
-Settings → Import...       → 拖檔進來,自動驗證 schema + checksums
+  ┌─────────────────────────────────────────────────────┐
+  │  Token usage  ─┐                                    │
+  │  Activity hooks├─→ Algorithm ─→ Rule multiplier ─→ XP
+  │  Manual grants ┘   (cross-pet     (per-template       │
+  │                     invariant)     personality)        │
+  └─────────────────────────────────────────────────────┘
 ```
 
-Import 時會嚴格驗證:
-- ✔ Manifest schema version
-- ✔ Sprite 完整性 (10 stages × PNG presence)
-- ✔ XP curve monotonicity
-- ✔ Rule shape (不接受未知 source_type)
+**Algorithm core** (`src/xp/algorithm.rs`, version-pinned, cross-install identical):
 
-不通過直接拒收,不會默默壞 state。
+```text
+weighted = input·1 + output·5 + reasoning·5 + cache_create·1.25 + cache_read·0.1
+raw      = weighted / 60,000 × tier_mult × confidence × growth_curve(level)
+xp       = round(raw).clamp(0, tier_cap)
+```
 
----
+**Tier multipliers** — capability bands stay stable across vendor price changes:
 
-## ⚙️ 技術選型
+| Tier | Examples | Mult | Per-event cap |
+|---|---|:---:|:---:|
+| 🌌 Frontier | Opus 4.7, GPT-5, o1+ | 1.5× | 10 XP |
+| 🌙 Mid | Sonnet, GPT-4o, Gemini 2.5 | 1.0× | 6 XP |
+| 🐰 Mini | Haiku, GPT-4o-mini, nano | 0.7× | 3 XP |
 
-| 層 | 用了什麼 |
+**Growth curve** — `1 / (1 + 0.02 · level)`. High levels naturally diminish: at L25 you earn 67% per event, at L50 only 50%. No way to whale-rush to L99 in a weekend.
+
+**Per-template personality** — rule multipliers `[0.5, 2.0]` let each template flavor its preferences. Unicorn rewards every chat (chat-friendly), Sun halves it (medium pacing), KingKong zeros it out (token-only diet).
+
+<br>
+
+###  🐕‍🦺 Multi-Pet & Custom Templates
+
+**Switch any time.** The active pet absorbs live events; the rest preserve their state forever. Run a parallel breeding program if you like.
+
+**Roll your own pet.** The built-in **Template Creator** gets you from blank to playable in under 3 minutes:
+
+1. Pick a **levels preset** — `short` / `medium` / `long` XP curve
+2. Pick a **stages preset** — `simple` (5 stages) / `balanced` (7) / `extended` (10)
+3. Fill in:
+   - Name, description, flavor text
+   - 10 sprite PNGs (drag-and-drop)
+   - Per-rule XP weights and per-model boosts
+   - Theme color + label chips
+
+Templates live at `~/.petpet/templates/<id>/` — pure JSON + PNGs. Hand-edit, git-version, share with friends. No proprietary format anywhere.
+
+<br>
+
+###  📊 Dashboard
+
+Click your pet → opens a usage dashboard packed with:
+
+- 💰 **Feeding Bill** — today / this week / this month / lifetime USD + token totals
+- 📈 **30-day chart** — daily spend trend, see your AI habits at a glance
+- 🤖 **Per-model breakdown** — which models you've fed your pet, and how much
+- 📜 **Recent moves** — every XP gain logged with source (`usage` / `activity` / `manual`)
+- ⏮️ **All vs single-pet toggle** — `All` includes pre-install historical sessions (display-only, no retroactive XP)
+
+On launch, petpet performs **async historical import** of past session logs — your dashboard isn't empty on Day 1.
+
+<br>
+
+###  📦 Pet & Template Sharing
+
+Pack any pet (snapshot + XP history + custom name) or any template into a `.petpet` archive. Toss it on USB / Discord / GitHub releases. The recipient imports, schema is validated end-to-end:
+
+```
+✓ Manifest schema version       ✓ Sprite completeness (10 × PNG)
+✓ XP curve monotonicity         ✓ Rule shape (no unknown source_type)
+✓ SHA-256 checksums             ✓ No path traversal in archive
+```
+
+Invalid archives are **rejected**, never silently importing broken state.
+
+<br>
+
+###  ⚙️ Tech Stack
+
+| Layer | Built with |
 |---|---|
-| Desktop shell | Tauri 2 (Rust + WebView2/WKWebView) |
+| Desktop shell | Tauri 2 (Rust + native webview) |
 | Frontend | React 19 + Vite + TypeScript |
-| 後端 / XP 引擎 | Rust (純 async,Tokio runtime) |
-| Persistence | SQLite (WAL mode, 單 writer 序列化) |
-| Event ingest | JSONL watcher + native hooks (HTTP local server) |
-| 模型 registry | 遠端 GitHub-hosted JSON,啟動時 sync,離線可用 cache |
+| XP engine | Pure async Rust, Tokio runtime |
+| Persistence | SQLite (WAL mode, single-writer serialized) |
+| Event ingest | JSONL watcher + local HTTP hook server |
+| Model registry | Remote GitHub-hosted JSON, sync on launch, offline cache fallback |
 
----
+<br>
 
-## 🛠️ 從原始碼建置
+###  🛠️ Build from Source
 
 ```sh
-# 1. Install Rust + Node 22 + pnpm
-# 2. Clone
+# Prerequisites: Rust toolchain, Node 22+, pnpm
+
 git clone https://github.com/ppXD/petpet.git
 cd petpet/desktop
 
-# 3. Dev (hot-reload)
 pnpm install
-pnpm tauri dev
+pnpm tauri dev          # hot-reload dev build
 
-# 4. Release build
+# Release bundles → desktop/src-tauri/target/release/bundle/
 pnpm tauri build
-# → desktop/src-tauri/target/release/bundle/
 ```
 
----
+<br>
 
-## 📄 授權
+###  📄 License
 
-MIT.  寵物 sprite 與本 repo 程式碼皆可自由 fork、修改、商用。
+MIT — see [LICENSE](LICENSE). Fork it, modify it, ship it commercially. Pet sprites and engine code all under the same hat.
 
----
+<br>
 
 <div align="center">
-  Made with 🍓 by humans who use AI too much.
+
+Made with 🍓 by humans who use AI too much.
+
 </div>
