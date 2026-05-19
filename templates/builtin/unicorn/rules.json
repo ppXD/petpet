@@ -34,8 +34,8 @@
     "config": { "weight": {"input":0.1,"output":1.0,"reasoning":1.0,"cache_creation":0.25,"cache_read":0.01},
       "divisor": 8000, "multiplier": 1.0, "min_xp": 1, "max_xp": 250 } },
 
-  { "id": "act-user-prompt",    "source_type": "activity", "match": {"kind":"user_prompt_submit"},  "config": {"xp":3,"reason":"Mist loves chatter"},     "priority": 60, "description": "Mist: chatter rewarded" },
-  { "id": "act-assistant-stop", "source_type": "activity", "match": {"kind":"assistant_stop"},      "config": {"xp":1}, "priority": 50 },
+  { "id": "act-user-prompt",    "source_type": "activity", "match": {"kind":"user_prompt_submit"},  "config": {"xp":2,"reason":"Mist loves chatter"},     "priority": 60, "description": "Mist: chatter rewarded" },
+  { "id": "act-assistant-stop", "source_type": "activity", "match": {"kind":"assistant_stop"},      "config": {"xp":0}, "priority": 50 },
   { "id": "act-tool-success",   "source_type": "activity", "match": {"kind":"tool_use_end","success":true}, "config": {"xp":0}, "priority": 60 },
   { "id": "act-task-completed", "source_type": "activity", "match": {"kind":"task_completed"},      "config": {"xp":15}, "priority": 50 },
   { "id": "act-subagent-stop",  "source_type": "activity", "match": {"kind":"subagent_stop"},       "config": {"xp":10}, "priority": 50 },
