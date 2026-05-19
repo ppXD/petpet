@@ -812,13 +812,7 @@ pub(crate) fn validate_name(input: Option<&str>) -> Result<Option<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
-
-    // Engine tests mutate the global `PETPET_HOME` env var so the
-    // template registry resolves to a per-test tempdir. Serialize them
-    // — running in parallel races the env-var swaps and the on-disk
-    // builtin-templates extraction.
-    static ENGINE_TEST_LOCK: Mutex<()> = Mutex::new(());
+    use crate::xp::env_test_lock;
 
     #[test]
     fn validate_name_none() {
@@ -854,7 +848,7 @@ mod tests {
 
     #[tokio::test]
     async fn pick_template_creates_pet_with_snapshot() {
-        let _g = ENGINE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _g = env_test_lock();
         let dir = tempfile::tempdir().expect("tempdir");
         std::env::set_var("PETPET_HOME", dir.path());
         let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
@@ -877,7 +871,7 @@ mod tests {
 
     #[tokio::test]
     async fn pick_template_unknown_errors() {
-        let _g = ENGINE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _g = env_test_lock();
         let dir = tempfile::tempdir().expect("tempdir");
         std::env::set_var("PETPET_HOME", dir.path());
         let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
@@ -890,7 +884,7 @@ mod tests {
 
     #[tokio::test]
     async fn ingest_usage_emits_evolved_when_crossing_anchor() {
-        let _g = ENGINE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _g = env_test_lock();
         let dir = tempfile::tempdir().expect("tempdir");
         std::env::set_var("PETPET_HOME", dir.path());
         let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
@@ -920,7 +914,7 @@ mod tests {
 
     #[tokio::test]
     async fn finalize_naming_locks_and_updates_pet_json() {
-        let _g = ENGINE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _g = env_test_lock();
         let dir = tempfile::tempdir().expect("tempdir");
         std::env::set_var("PETPET_HOME", dir.path());
         let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
