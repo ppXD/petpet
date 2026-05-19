@@ -68,6 +68,10 @@ petpet is a desktop companion that quietly listens to **Claude Code / Codex / Op
 
 ###  🦄 Three Built-in Difficulty Templates
 
+<div align="center">
+  <img src="assets/screenshots/three-eggs.png" alt="Three difficulty eggs" width="720">
+</div>
+
 | | Template | Difficulty | Default name | Hatch (Opus 4.7) | L99 (heavy use) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | <img src="templates/builtin/unicorn/thumb.png" width="72"> | **Unicorn** | 🟢 Easy | Sparkle | ~5–10 conv | ~30 days |
@@ -82,12 +86,9 @@ petpet is a desktop companion that quietly listens to **Claude Code / Codex / Op
 
 Every pet has **10 evolution stages** — egg → newborn → six juvenile / adult forms → final apex form. XP accrues from real-world events; level thresholds gate visual transformations.
 
-```
-   Stage 0       Stage 1         Stage 5         Stage 9
-     🥚    →     🐣      →   ✨ midform ✨  →   🌟 apex 🌟
-     L0          L1              L40              L99
-   (egg)       (hatch)        (mid-evolution)   (final form)
-```
+<div align="center">
+  <img src="assets/screenshots/evolution-strip-all.png" alt="Evolution stages across the three templates" width="780">
+</div>
 
 **The XP pipeline**
 
