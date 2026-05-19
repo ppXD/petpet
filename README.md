@@ -69,14 +69,16 @@ petpet is a desktop companion that quietly listens to **Claude Code / Codex / Op
 ###  🦄 Three Built-in Difficulty Templates
 
 <div align="center">
-  <img src="assets/screenshots/three-eggs.png" alt="Three difficulty eggs" width="720">
-</div>
+
+<img src="assets/screenshots/three-eggs.png" alt="Three difficulty eggs" width="720">
 
 | | Template | Difficulty | Default name | Hatch (Opus 4.7) | L99 (heavy use) |
 |:---:|:---:|:---:|:---:|:---:|:---:|
 | <img src="templates/builtin/unicorn/thumb.png" width="72"> | **Unicorn** | 🟢 Easy | Sparkle | ~5–10 conv | ~30 days |
 | <img src="templates/builtin/sun/thumb.png" width="72"> | **Sun (Wukong)** | 🟡 Medium | Wukong | ~15–20 conv | ~60 days |
 | <img src="templates/builtin/kingkong/thumb.png" width="72"> | **KingKong** | 🔴 Hard | KingKong | ~30+ conv | ~150 days |
+
+</div>
 
 **Hard mode philosophy** — KingKong won't budge for idle chat. Only deliberate work counts: AI token usage, completed tasks, dispatched subagents. Want a titan? Earn it.
 
