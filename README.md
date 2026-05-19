@@ -2,7 +2,9 @@
 
 <img src="desktop/src-tauri/icons/icon.png" width="140" alt="petpet">
 
-<h1>Real AI Pet Raising</h1>
+<h1>petpet</h1>
+
+<h3>Real AI Pet Raising</h3>
 
 <p><i>The harder you work your AI — the mightier your pet becomes.</i> 🐣 → 🦄</p>
 
