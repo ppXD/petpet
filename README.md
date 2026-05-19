@@ -94,14 +94,9 @@ Every pet has **10 evolution stages** — egg → newborn → six juvenile / adu
 
 **The XP pipeline**
 
-```
-  ┌─────────────────────────────────────────────────────┐
-  │  Token usage  ─┐                                    │
-  │  Activity hooks├─→ Algorithm ─→ Rule multiplier ─→ XP
-  │  Manual grants ┘   (cross-pet     (per-template       │
-  │                     invariant)     personality)        │
-  └─────────────────────────────────────────────────────┘
-```
+<div align="center">
+  <img src="assets/screenshots/xp-pipeline.png" alt="XP pipeline: sources → algorithm → rule multiplier → XP" width="720">
+</div>
 
 **Algorithm core** (`src/xp/algorithm.rs`, version-pinned, cross-install identical):
 
