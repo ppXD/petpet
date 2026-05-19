@@ -168,19 +168,6 @@ Invalid archives are **rejected**, never silently importing broken state.
 
 <br>
 
-###  ⚙️ Tech Stack
-
-| Layer | Built with |
-|---|---|
-| Desktop shell | Tauri 2 (Rust + native webview) |
-| Frontend | React 19 + Vite + TypeScript |
-| XP engine | Pure async Rust, Tokio runtime |
-| Persistence | SQLite (WAL mode, single-writer serialized) |
-| Event ingest | JSONL watcher + local HTTP hook server |
-| Model registry | Remote GitHub-hosted JSON, sync on launch, offline cache fallback |
-
-<br>
-
 ###  🛠️ Build from Source
 
 ```sh
