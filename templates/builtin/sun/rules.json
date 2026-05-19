@@ -36,7 +36,7 @@
 
   { "id": "act-user-prompt",    "source_type": "activity", "match": {"kind":"user_prompt_submit"},  "config": {"xp":1}, "priority": 50, "description": "Sun: half-rate activity (medium difficulty)" },
   { "id": "act-assistant-stop", "source_type": "activity", "match": {"kind":"assistant_stop"},      "config": {"xp":1}, "priority": 50 },
-  { "id": "act-tool-success",   "source_type": "activity", "match": {"kind":"tool_use_end","success":true}, "config": {"xp":1}, "priority": 60 },
+  { "id": "act-tool-success",   "source_type": "activity", "match": {"kind":"tool_use_end","success":true}, "config": {"xp":0}, "priority": 60 },
   { "id": "act-task-completed", "source_type": "activity", "match": {"kind":"task_completed"},      "config": {"xp":7}, "priority": 50 },
   { "id": "act-subagent-stop",  "source_type": "activity", "match": {"kind":"subagent_stop"},       "config": {"xp":5}, "priority": 50 },
   { "id": "act-session-start",  "source_type": "activity", "match": {"kind":"session_start"},       "config": {"xp":2}, "priority": 50 },
