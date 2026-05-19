@@ -97,6 +97,38 @@ jobs:
           cache: pnpm
           cache-dependency-path: desktop/pnpm-lock.yaml
 
+      # ─── Sync version from tag into bundle manifests ─────────────
+      # `tauri-action` stamps Tauri's bundle filenames from the version
+      # field in tauri.conf.json — NOT from the git tag. If conf has
+      # 0.1.0 but we're releasing v0.2.0, every artifact gets named
+      # petpet_0.1.0_*, the tidy-asset-names job's globs (built off
+      # the tag) miss, and the published draft ships with
+      # `_universal` / `_en-US` suffixes still on it.
+      #
+      # Fix: rewrite the version in tauri.conf.json + package.json
+      # from the tag BEFORE pnpm/tauri build. The repo's checked-in
+      # version can stay at whatever the next planned release is
+      # (or `0.1.0-dev`); the release pipeline is the source of truth.
+      #
+      # jq is pre-installed on every GitHub Actions runner image
+      # (ubuntu/macos/windows). On Windows we run under Git-Bash
+      # (the `shell: bash` directive) so the same one-liner works.
+      - name: Sync version from tag to bundle manifests
+        shell: bash
+        working-directory: desktop
+        run: |
+          VERSION="${{ inputs.tag || github.ref_name }}"
+          VERSION="${VERSION#v}"
+          echo "Syncing version $VERSION into tauri.conf.json + package.json"
+
+          TMP=$(mktemp)
+          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > "$TMP" && mv "$TMP" src-tauri/tauri.conf.json
+          TMP=$(mktemp)
+          jq --arg v "$VERSION" '.version = $v' package.json > "$TMP" && mv "$TMP" package.json
+
+          echo "After sync:"
+          grep -E '"version"' src-tauri/tauri.conf.json package.json
+
       - name: Install frontend dependencies
         working-directory: desktop
         run: pnpm install --frozen-lockfile
@@ -305,22 +337,20 @@ jobs:
                 --input - --jq .body)
 
           # The install template — uses a SINGLE-QUOTED heredoc so bash
-          # doesn't try to expand anything inside (otherwise "$99/year"
-          # is read as positional param $9, "SHA-256" reads $5 from
-          # -256, etc. — both fail under `set -u`). Version + repo are
-          # substituted via placeholder replacement after the fact.
+          # doesn't try to expand anything inside (otherwise "SHA-256"
+          # reads $5 from -256 and similar tricks fail under `set -u`).
+          # Version + repo are substituted via placeholder replacement
+          # after the fact.
           INSTALL_TEMPLATE=$(cat <<'TEMPLATE'
           ## 📦 Install
 
           ### 🍎 macOS (universal — Apple Silicon + Intel)
 
-          Download `petpet___VERSION__.dmg`, drag petpet to `/Applications`, then strip the macOS quarantine attribute on first launch:
+          Download `petpet___VERSION__.dmg`, drag petpet to `/Applications`, then clear macOS's quarantine attribute on first launch:
 
           ```sh
           xattr -cr /Applications/petpet.app
           ```
-
-          > **Why the workaround?** petpet ships without Apple Developer notarization (USD 99 per year via the Apple Developer Program). Once we configure it, the warning disappears entirely.
 
           ### 🐧 Linux x64
 
