@@ -19,6 +19,12 @@
 <br>
 
 <div align="center">
+  <img src="assets/screenshots/hero.png" alt="petpet — pick your starter, raise it for months" width="900">
+</div>
+
+<br>
+
+<div align="center">
 
 ### 🥚 Pick your egg
 
