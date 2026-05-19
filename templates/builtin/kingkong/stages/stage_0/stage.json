@@ -1,0 +1,10 @@
+{
+  "id": "stage_0",
+  "name": "Stage 0",
+  "flavor": "Obsidian egg — sparks of starlight in the shell.",
+  "trigger": {
+    "metric": "level",
+    "value": 0
+  },
+  "attributes": {}
+}

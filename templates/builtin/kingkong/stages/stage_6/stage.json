@@ -1,0 +1,10 @@
+{
+  "id": "stage_6",
+  "name": "Stage 6",
+  "flavor": "First circuits embedded — chrome under fur.",
+  "trigger": {
+    "metric": "level",
+    "value": 55
+  },
+  "attributes": {}
+}

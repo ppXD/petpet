@@ -1,0 +1,10 @@
+{
+  "id": "stage_9",
+  "name": "Stage 9",
+  "flavor": "Cyborg legend. Lightning in the knuckles.",
+  "trigger": {
+    "metric": "level",
+    "value": 99
+  },
+  "attributes": {}
+}

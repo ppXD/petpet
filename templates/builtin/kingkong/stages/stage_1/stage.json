@@ -1,0 +1,10 @@
+{
+  "id": "stage_1",
+  "name": "Stage 1",
+  "flavor": "Cracked. A young primate stirs.",
+  "trigger": {
+    "metric": "level",
+    "value": 1
+  },
+  "attributes": {}
+}

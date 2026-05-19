@@ -6,7 +6,8 @@
     "version": "1.0.0",
     "author": "petpet-builtin",
     "license": "MIT",
-    "description": "A monkey-king companion born from the magical stone of Huaguo Mountain. Medium difficulty — engaged users reach the final Buddha form in a few months of regular use."
+    "description": "A monkey-king companion born from the magical stone of Huaguo Mountain. Medium difficulty — engaged users reach the final Buddha form in a few months of regular use.",
+    "display_order": 2
   },
   "species": {
     "name": "Sun",

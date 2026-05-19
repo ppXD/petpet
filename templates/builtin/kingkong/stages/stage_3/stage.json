@@ -1,0 +1,10 @@
+{
+  "id": "stage_3",
+  "name": "Stage 3",
+  "flavor": "Lean and watchful, learning the climb.",
+  "trigger": {
+    "metric": "level",
+    "value": 15
+  },
+  "attributes": {}
+}

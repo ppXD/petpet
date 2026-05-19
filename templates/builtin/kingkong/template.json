@@ -1,0 +1,33 @@
+{
+  "$schema": "petpet-template/v1",
+  "meta": {
+    "id": "kingkong",
+    "name": "KingKong",
+    "version": "1.0.0",
+    "author": "petpet-builtin",
+    "license": "MIT",
+    "description": "A titan beast forged from stone and circuitry. Hard difficulty — only deliberate progress (tasks completed, subagents dispatched) and AI token usage feed it. Idle chat won't budge the meter. Roughly 2.5× the time investment of Sun.",
+    "display_order": 3
+  },
+  "species": {
+    "name": "KingKong",
+    "description": "King Kong — born from a starlit black-stone egg, evolving from young primate to armoured titan to cyber-god. Demands real work, not chitchat.",
+    "default_pet_name": "KingKong",
+    "flavor": "Forged in obsidian, ascending in titanium."
+  },
+  "labels": [
+    { "text": "Hard", "color": "#1a1a1a", "fg": "#d4af37" },
+    { "text": "Challenge", "color": "#d4af37", "fg": "#1a1a1a" }
+  ],
+  "theme": {
+    "primary":   "#3a4a6a",
+    "secondary": "#d4af37",
+    "accent":    "#1a1a1a",
+    "palette":   ["#1a1a1a", "#3a4a6a", "#5d7099", "#8a9bb8", "#d4af37", "#f0e0a0"]
+  },
+  "assets": {
+    "sheet":  "sheet.png",
+    "frames": "sheet.json",
+    "thumb":  "thumb.png"
+  }
+}

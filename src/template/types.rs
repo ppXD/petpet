@@ -72,6 +72,12 @@ pub struct TemplateMeta {
     pub description: Option<String>,
     #[serde(default)]
     pub source_url: Option<String>,
+    /// Display ordering hint for the egg-picker UI. Lower = shown
+    /// earlier. Templates without an explicit value (e.g. user-imported
+    /// community ones) sort after explicit-order templates, alphabetically.
+    /// Builtin difficulty ladder: unicorn=1, sun=2, kingkong=3.
+    #[serde(default)]
+    pub display_order: Option<i32>,
 }
 
 /// Author shape on disk. Templates in the wild use either:
