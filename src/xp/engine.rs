@@ -877,7 +877,7 @@ mod tests {
         // would just show one fewer template. Sun was the only canary
         // and didn't catch unicorn-specific issues. This test pins
         // that the rebalance keeps unicorn loadable end-to-end.
-        let _g = ENGINE_TEST_LOCK.lock().unwrap_or_else(|e| e.into_inner());
+        let _g = env_test_lock();
         let dir = tempfile::tempdir().expect("tempdir");
         std::env::set_var("PETPET_HOME", dir.path());
         let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
