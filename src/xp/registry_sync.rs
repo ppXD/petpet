@@ -171,14 +171,7 @@ fn atomic_write_cache(content: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Mutex;
-
-    fn env_lock() -> std::sync::MutexGuard<'static, ()> {
-        static L: std::sync::OnceLock<Mutex<()>> = std::sync::OnceLock::new();
-        L.get_or_init(|| Mutex::new(()))
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-    }
+    use crate::xp::env_test_lock as env_lock;
 
     #[test]
     fn default_url_targets_petpet_model_registry_repo() {

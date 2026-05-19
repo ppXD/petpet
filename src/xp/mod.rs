@@ -45,3 +45,20 @@ pub use types::{
     ActivityInput, ManualGrant, MatchContext, Pet, PetStageRow, RuleId, XpComputation,
     XpSource, XpSourceType,
 };
+
+// ─── Shared test-only env-var lock ──────────────────────────────────
+// Tests across `xp::engine` and `xp::registry_sync` both mutate the
+// global `PETPET_HOME` env var to point at a per-test tempdir. Without
+// a shared lock, two test modules can clobber each other's env state
+// mid-run — manifesting as ~10% flake on `pick_template_creates_pet_*`
+// (the engine test sees PETPET_HOME pointing at a non-existent
+// registry_sync tempdir → "unknown template: sun").
+//
+// One mutex, both modules. Production code never touches it.
+#[cfg(test)]
+pub(crate) fn env_test_lock() -> std::sync::MutexGuard<'static, ()> {
+    static L: std::sync::OnceLock<std::sync::Mutex<()>> = std::sync::OnceLock::new();
+    L.get_or_init(|| std::sync::Mutex::new(()))
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+}
