@@ -545,6 +545,7 @@ mod tests {
         // picker / pet creation would silently break.
         assert!(BUILTIN.get_dir("sun").is_some());
         assert!(BUILTIN.get_dir("unicorn").is_some());
+        assert!(BUILTIN.get_dir("kingkong").is_some());
     }
 
     fn stage_at(idx: u32, trigger: Trigger) -> Stage {
@@ -618,6 +619,7 @@ mod tests {
                 license: None,
                 description: None,
                 source_url: None,
+                display_order: None,
             },
             species: TemplateSpecies {
                 name: "Test".into(),

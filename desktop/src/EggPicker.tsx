@@ -39,6 +39,11 @@ interface TemplateMeta {
   /// `id` (e.g. "mars" in "mars.drakon") when rendering the "by
   /// <author>" chip in the picker row.
   author?: AuthorBlock;
+  /// Display ordering hint for the egg-picker UI. Lower = shown earlier.
+  /// Builtin difficulty ladder: unicorn=1, sun=2, kingkong=3.
+  /// Templates without an explicit value (user-imported community ones)
+  /// sort AFTER explicit-order templates, by name alphabetically.
+  display_order?: number;
 }
 
 /// Disambiguator label for the egg-picker row. Two templates with the
@@ -134,11 +139,19 @@ export function EggPicker({ onConfirm, onCancel, onImport }: Props) {
   const loadTemplates = useCallback(async (): Promise<TemplateInfo[] | null> => {
     try {
       const rows = await invoke<TemplateInfo[]>("template_list");
-      const order = (s: string) =>
+      const sourceRank = (s: string) =>
         s === "builtin" ? 0 : s === "community" ? 1 : 2;
+      // Templates without `display_order` sort AFTER explicit ones —
+      // builtin difficulty ladder (unicorn=1, sun=2, kingkong=3) wins,
+      // community/custom imports fall back to name alphabetic at the
+      // tail. Using +Infinity keeps the comparator stable and avoids
+      // mixing "unordered" templates into the middle of the ladder.
+      const orderRank = (m: TemplateMeta) =>
+        m.display_order ?? Number.POSITIVE_INFINITY;
       rows.sort(
         (a, b) =>
-          order(a.source) - order(b.source) ||
+          sourceRank(a.source) - sourceRank(b.source) ||
+          orderRank(a.template.meta) - orderRank(b.template.meta) ||
           a.template.meta.name.localeCompare(b.template.meta.name),
       );
       setTemplates(rows);

@@ -1,0 +1,10 @@
+{
+  "id": "stage_4",
+  "name": "Stage 4",
+  "flavor": "Young silverback, finding its roar.",
+  "trigger": {
+    "metric": "level",
+    "value": 25
+  },
+  "attributes": {}
+}

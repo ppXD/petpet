@@ -6,7 +6,8 @@
     "version": "1.0.0",
     "author": "petpet-builtin",
     "license": "MIT",
-    "description": "A sparkly pink unicorn companion — Easy difficulty. Hatches from a crystal egg and grows into a winged alicorn on a rainbow cloud, then ascends in gold."
+    "description": "A sparkly pink unicorn companion — Easy difficulty. Hatches from a crystal egg and grows into a winged alicorn on a rainbow cloud, then ascends in gold.",
+    "display_order": 1
   },
   "species": {
     "name": "Unicorn",

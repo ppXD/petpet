@@ -1,0 +1,10 @@
+{
+  "id": "stage_5",
+  "name": "Stage 5",
+  "flavor": "Armoured stride — bone and muscle hardened.",
+  "trigger": {
+    "metric": "level",
+    "value": 40
+  },
+  "attributes": {}
+}

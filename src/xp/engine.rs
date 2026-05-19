@@ -1006,6 +1006,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn pick_template_kingkong_loads_and_creates_pet() {
+        // KingKong is the 3rd builtin (hard mode, ~2.5× Sun). Same
+        // load-canary as the unicorn test: silently broken levels /
+        // stages / rules in this template would drop it from the
+        // picker without anything red-flagging.
+        let _g = env_test_lock();
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_var("PETPET_HOME", dir.path());
+        let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
+            .await
+            .expect("open db");
+        let engine = XPEngine::open(db.clone()).await.expect("open engine");
+
+        let pet = engine
+            .pick_template("kingkong", Some("Konga".into()))
+            .await
+            .expect("kingkong should load and snapshot");
+
+        assert_eq!(pet.template_id, "kingkong");
+        assert_eq!(pet.name, "Konga");
+    }
+
+    #[tokio::test]
     async fn pick_template_unknown_errors() {
         let _g = env_test_lock();
         let dir = tempfile::tempdir().expect("tempdir");

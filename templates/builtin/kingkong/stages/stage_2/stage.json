@@ -1,0 +1,10 @@
+{
+  "id": "stage_2",
+  "name": "Stage 2",
+  "flavor": "Wide-eyed cub, testing its grip.",
+  "trigger": {
+    "metric": "level",
+    "value": 7
+  },
+  "attributes": {}
+}

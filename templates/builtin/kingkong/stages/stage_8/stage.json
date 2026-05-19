@@ -1,0 +1,10 @@
+{
+  "id": "stage_8",
+  "name": "Stage 8",
+  "flavor": "Half titan, half god. Engines online.",
+  "trigger": {
+    "metric": "level",
+    "value": 86
+  },
+  "attributes": {}
+}
