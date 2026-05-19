@@ -356,6 +356,16 @@ impl XPEngine {
     pub async fn ingest_usage(&self, ue: &UsageEvent) -> Result<Option<PetStateUpdate>> {
         let guard = self.active.read().await;
         let Some(active) = guard.as_ref() else { return Ok(None) };
+        // Pets don't earn XP from events that occurred before they
+        // were born. The live JSONL watcher snaps cursors to EOF on
+        // first-seen so this is mostly defensive — but if a backlog
+        // ever flushes (clock skew, lag spike, watcher restart after a
+        // gap), a freshly-picked pet should NOT pick up a month's
+        // worth of XP retroactively. The historical-import lane uses
+        // a separate sink that bypasses this entirely.
+        if ue.timestamp < active.pet.born_at {
+            return Ok(None);
+        }
         // Fetch the pet's level BEFORE this event for the algorithm's
         // growth curve. Falls back to 0 for brand-new pets with no
         // state row yet.
@@ -401,6 +411,11 @@ impl XPEngine {
     pub async fn ingest_activity(&self, ae: &ActivityEvent) -> Result<Option<PetStateUpdate>> {
         let guard = self.active.read().await;
         let Some(active) = guard.as_ref() else { return Ok(None) };
+        // See `ingest_usage` — pets don't earn XP from activities that
+        // happened before they were born.
+        if ae.timestamp < active.pet.born_at {
+            return Ok(None);
+        }
         let Some(comp) = active.calculator.score_activity(ae) else { return Ok(None) };
         let rec = XpEventRecord::new(
             &active.pet.id,
@@ -509,12 +524,15 @@ impl XPEngine {
             .await??
             .ok_or_else(|| anyhow!("unknown template: {}", template_id))?;
         let validated = validate_name(name.as_deref())?;
-        // Track whether the user explicitly named the pet. If yes,
-        // we treat that as a finalize too — no need to re-prompt at
-        // hatch ceremony. If they skipped naming in the picker (left
-        // it blank), `name_finalized_at` stays None and the hatch
-        // flow will pop the naming popup.
-        let user_named = validated.is_some();
+        // The name typed in the egg picker (if any) is the pet's
+        // INITIAL display name only — it never auto-finalizes naming.
+        // Prior to this commit we treated picker-supplied names as
+        // implicit finalize, which silenced the hatch-ceremony naming
+        // popup forever and made the experience inconsistent (a user
+        // who typed in the picker never saw the popup; a user who
+        // left it blank did). Naming is now ALWAYS finalized through
+        // the popup, by either Confirm (keep current / type new) or
+        // Skip (leave mutable, popup re-fires next app session).
         let resolved_name = validated.unwrap_or_else(|| default_pet_name(&loaded.template.species));
 
         let origin_device_id = self.origin_device_id.clone();
@@ -537,15 +555,6 @@ impl XPEngine {
             .await?;
         self.db.set_only_active_pet(&pet.id).await?;
         self.db.upsert_pet_state(&pet.id, 0, 0, None).await?;
-
-        // Lock the name now if the user supplied one in the picker —
-        // they shouldn't be re-asked at hatch. We call finalize_naming
-        // with the same name (no-op rename, just sets timestamp).
-        let pet = if user_named {
-            self.finalize_naming(&pet.id, Some(pet.name.clone())).await?
-        } else {
-            pet
-        };
 
         let active = self.load_active(pet.clone()).await?;
         *self.active.write().await = Some(active);
@@ -867,6 +876,108 @@ mod tests {
         // pet.json must exist on disk
         let pet_json = PathBuf::from(&pet.snapshot_path).join("pet.json");
         assert!(pet_json.exists(), "pet.json should exist at {:?}", pet_json);
+        // Regression guard: a name supplied in the egg picker is the
+        // pet's INITIAL display name only — it must NOT auto-finalize
+        // naming, otherwise the hatch-ceremony popup never fires.
+        // Naming is locked exclusively through `finalize_naming`
+        // (called by the confirm path of `naming_dismiss`).
+        assert!(
+            pet.name_finalized_at.is_none(),
+            "pick_template must not auto-finalize naming when picker supplies a name; \
+             got name_finalized_at = {:?}",
+            pet.name_finalized_at,
+        );
+    }
+
+    #[tokio::test]
+    async fn pick_template_blank_name_uses_default_and_stays_unfinalized() {
+        // Companion to the above — a blank picker name uses the
+        // species default and also stays unfinalized.
+        let _g = env_test_lock();
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_var("PETPET_HOME", dir.path());
+        let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
+            .await
+            .expect("open db");
+        let engine = XPEngine::open(db.clone()).await.expect("open engine");
+
+        let pet = engine
+            .pick_template("sun", None)
+            .await
+            .expect("pick sun");
+
+        assert!(!pet.name.is_empty(), "default name should be applied");
+        assert!(
+            pet.name_finalized_at.is_none(),
+            "blank-picker pets must also stay unfinalized",
+        );
+    }
+
+    #[tokio::test]
+    async fn ingest_usage_skips_events_before_pet_was_born() {
+        // Defensive: a freshly-picked pet must not accumulate XP from
+        // events whose `timestamp` predates `born_at`. The live
+        // JSONL watcher snaps to EOF on first-seen so this is usually
+        // a non-issue, but a backlog flush (lag, clock skew, watcher
+        // restart) would otherwise dump retroactive XP onto a newborn.
+        use crate::event::{EventKind, ProviderId, SourceRef, TokenDelta, UsageEvent};
+        use chrono::Duration;
+        use uuid::Uuid;
+
+        let _g = env_test_lock();
+        let dir = tempfile::tempdir().expect("tempdir");
+        std::env::set_var("PETPET_HOME", dir.path());
+        let db = crate::db::DbHandle::open(&dir.path().join("test.db"))
+            .await
+            .expect("open db");
+        let engine = XPEngine::open(db.clone()).await.expect("open engine");
+
+        let pet = engine
+            .pick_template("sun", Some("Birthday".into()))
+            .await
+            .expect("pick sun");
+
+        // Event timestamp one hour BEFORE the pet was born.
+        let prehistoric = pet.born_at - Duration::hours(1);
+        let event = UsageEvent {
+            id: Uuid::new_v4(),
+            provider: ProviderId::ClaudeCode,
+            client: None,
+            session_id: "s".into(),
+            project_path: None,
+            git_branch: None,
+            model: "claude-opus-4-7".into(),
+            timestamp: prehistoric,
+            tokens: TokenDelta {
+                input: 100_000,
+                output: 50_000,
+                cache_read: 0,
+                cache_creation: 0,
+                reasoning: 0,
+            },
+            kind: EventKind::Turn { stop_reason: None },
+            source: SourceRef {
+                file: "test".into(),
+                byte_offset: 0,
+                line: 1,
+            },
+        };
+
+        let result = engine.ingest_usage(&event).await.expect("ingest");
+        assert!(
+            result.is_none(),
+            "pre-birth event must not produce a state update; \
+             got {:?}",
+            result.as_ref().map(|u| u.total_xp),
+        );
+
+        // Total XP stays 0 — no event was credited.
+        let state = db
+            .get_pet_state(&pet.id)
+            .await
+            .expect("state")
+            .expect("row");
+        assert_eq!(state.total_xp, 0);
     }
 
     #[tokio::test]

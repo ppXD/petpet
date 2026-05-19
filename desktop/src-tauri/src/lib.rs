@@ -778,28 +778,33 @@ async fn naming_dismiss(
 ) -> Result<(), String> {
     tracing::info!(pet_id = %pet_id, confirmed, "naming_dismiss invoked");
 
-    // Decide what name to lock in. None = keep current default.
-    let final_name: Option<String> = if confirmed {
-        name.as_deref()
+    // Only Confirm finalizes. Skip closes the window without locking
+    // the name — so the popup re-fires on the next app session (and
+    // any future stage-1 trigger within this session that React's
+    // useNamingPopupSync hook re-evaluates). The user's contract:
+    // "popup keeps coming back until I confirm."
+    if confirmed {
+        let final_name: Option<String> = name
+            .as_deref()
             .map(str::trim)
             .filter(|s| !s.is_empty())
-            .map(|s| s.to_string())
-    } else {
-        None
-    };
+            .map(|s| s.to_string());
+        state
+            .xp
+            .finalize_naming(&pet_id, final_name)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, "naming_dismiss: finalize_naming failed");
+                e.to_string()
+            })?;
+        // pet.json + DB row now carry name_finalized_at = now → hook
+        // hides the popup on next re-evaluation.
+        let _ = app.emit("pet://active_changed", &pet_id);
+    }
 
-    state
-        .xp
-        .finalize_naming(&pet_id, final_name)
-        .await
-        .map_err(|e| {
-            tracing::error!(error = %e, "naming_dismiss: finalize_naming failed");
-            e.to_string()
-        })?;
-    // Broadcast so every window re-reads the snapshot — the active pet's
-    // `name_finalized_at` is now set, which makes `useNamingPopupSync`
-    // hide the popup and stop re-prompting.
-    let _ = app.emit("pet://active_changed", &pet_id);
+    // Always emit `naming://done` so any listener (including the hook's
+    // ref-based dedupe) knows the popup is closed, regardless of which
+    // button the user clicked.
     let _ = app.emit("naming://done", &pet_id);
 
     if let Some(w) = app.get_webview_window("naming") {
