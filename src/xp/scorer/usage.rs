@@ -183,37 +183,40 @@ mod tests {
     #[test]
     fn opus_event_uses_frontier_tier_exact_confidence() {
         // claude-opus-4-7 → Registry says Frontier, Exact confidence.
-        // Tokens: input=1000, output=500, reasoning=300
-        // weighted = 1000*1 + 500*5 + 300*5 = 5000
-        // base = 5 * 1.5 (frontier) * 1.0 (exact) * 1.0 (level 0) = 7.5 → 8
-        // multiplier=1.0 → final = 8
+        // Tokens scaled post-v0.3.0 rebalance to clear noise threshold:
+        // input=40_000, output=40_000 → weighted = 40_000 + 200_000 = 240_000
+        // base = 240_000/60_000 × 1.5 × 1.0 × 1.0 = 6 → 6
+        // multiplier=1.0 → final = 6
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("claude-opus-4-7", 1000, 500, 300);
+        let ue = usage_event("claude-opus-4-7", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 8);
+        assert_eq!(c.xp_delta, 6);
     }
 
     #[test]
     fn sonnet_event_uses_mid_tier_exact_confidence() {
         // claude-sonnet-4 → Registry says Mid, Exact.
-        // input=2000 output=2000 → weighted=12000, base=12*1.0=12
+        // input=40_000 output=40_000 → weighted=240_000
+        // base = 240_000/60_000 × 1.0 × 1.0 × 1.0 = 4 → 4
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("claude-sonnet-4", 2000, 2000, 0);
+        let ue = usage_event("claude-sonnet-4", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 12);
+        assert_eq!(c.xp_delta, 4);
     }
 
     #[test]
     fn haiku_event_uses_mini_tier_exact_confidence() {
         // claude-haiku-4-5 → Mini, Exact.
-        // input=2000 output=2000 → weighted=12000, base=12*0.5=6
+        // input=20_000 output=20_000 → weighted=120_000 (kept under
+        // Mini cap=3 so we verify tier multiplier, not the cap path).
+        // base = 120_000/60_000 × 0.7 × 1.0 × 1.0 = 1.4 → 1
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("claude-haiku-4-5", 2000, 2000, 0);
+        let ue = usage_event("claude-haiku-4-5", 20_000, 20_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 6);
+        assert_eq!(c.xp_delta, 1);
     }
 
     // ─── Heuristic fallback for never-seen models ───────────────────
@@ -226,13 +229,13 @@ mod tests {
         // confidence-fix) treats the hardcoded match as Heuristic
         // (not Exact), so XP is dampened by 0.7×.
         //
-        // Tokens: 2000 output → weighted = 10000
-        // base = 10 * 1.5 (frontier) * 0.7 (heuristic) * 1.0 (level 0) = 10.5 → 11
+        // input=40_000, output=40_000 → weighted = 240_000
+        // base = 240_000/60_000 × 1.5 × 0.7 × 1.0 = 4.2 → 4
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("claude-opus-9-5", 0, 2000, 0);
+        let ue = usage_event("claude-opus-9-5", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 11);
+        assert_eq!(c.xp_delta, 4);
     }
 
     #[test]
@@ -240,13 +243,14 @@ mod tests {
         // "zephyr-7000": no registry hit, model.rs hardcoded fallback
         // also returns Tier::Unknown. Scorer hits classify() → heuristic
         // → FallbackResult::Default → (Mid, Unknown).
-        // 2000 output → weighted=10000, base = 10 * 1.0 * 0.4 = 4
+        // input=40_000 output=40_000 → weighted=240_000
+        // base = 240_000/60_000 × 1.0 × 0.4 × 1.0 = 1.6 → 2
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("zephyr-7000", 0, 2000, 0);
+        let ue = usage_event("zephyr-7000", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         assert_eq!(ident.tier, Tier::Unknown);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 4);
+        assert_eq!(c.xp_delta, 2);
     }
 
     #[test]
@@ -256,47 +260,48 @@ mod tests {
         // confidence-fix makes this Heuristic (not Exact) since the
         // registry didn't recognise the model name.
         //
-        // 2000 output → weighted = 10000
-        // base = 10 * 0.5 (mini) * 0.7 (heuristic) * 1.0 (level 0) = 3.5 → 4
+        // input=40_000 output=40_000 → weighted = 240_000
+        // base = 240_000/60_000 × 0.7 × 0.7 × 1.0 = 1.96 → 2
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("future-model-nano", 0, 2000, 0);
+        let ue = usage_event("future-model-nano", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         assert_eq!(ident.tier, Tier::Mini);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 4);
+        assert_eq!(c.xp_delta, 2);
     }
 
     // ─── Rule multiplier clamping ───────────────────────────────────
 
     #[test]
     fn rule_multiplier_under_one_scales_down() {
-        // base = 12 (from sonnet test), multiplier=0.5 → 12*0.5=6
+        // base = 4 (from sonnet test, 240K weighted), multiplier=0.5 → 2
         let r = rule(json!({ "multiplier": 0.5 }));
-        let ue = usage_event("claude-sonnet-4", 2000, 2000, 0);
+        let ue = usage_event("claude-sonnet-4", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 6);
+        assert_eq!(c.xp_delta, 2);
     }
 
     #[test]
     fn rule_multiplier_above_two_clamps_to_two() {
-        // base = 12 (sonnet, mid). multiplier=100.0 in JSON, clamped to 2.0.
-        // final = 12*2=24
+        // base = 4 (sonnet, mid). multiplier=100.0 in JSON, clamped to 2.0.
+        // final = 4×2 = 8 (cap is per-tier base, applies pre-multiplier;
+        // post-multiplier max is cap × 2.0 = 12 for Mid — under that.)
         let r = rule(json!({ "multiplier": 100.0 }));
-        let ue = usage_event("claude-sonnet-4", 2000, 2000, 0);
+        let ue = usage_event("claude-sonnet-4", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 24);
+        assert_eq!(c.xp_delta, 8);
     }
 
     #[test]
     fn rule_multiplier_below_half_clamps_to_half() {
-        // multiplier=0.01 clamped to 0.5. base=12*0.5=6
+        // multiplier=0.01 clamped to 0.5. base=4×0.5=2
         let r = rule(json!({ "multiplier": 0.01 }));
-        let ue = usage_event("claude-sonnet-4", 2000, 2000, 0);
+        let ue = usage_event("claude-sonnet-4", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 6);
+        assert_eq!(c.xp_delta, 2);
     }
 
     #[test]
@@ -311,27 +316,28 @@ mod tests {
             "min_xp": 100,
             "max_xp": 100
         }));
-        let ue = usage_event("claude-sonnet-4", 2000, 2000, 0);
+        let ue = usage_event("claude-sonnet-4", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        // Despite max_xp:100 and divisor:1.0, result is still 12
+        // Despite max_xp:100 and divisor:1.0, result is still 4
         // (the new algorithm's output, not the legacy config's).
-        assert_eq!(c.xp_delta, 12);
+        assert_eq!(c.xp_delta, 4);
     }
 
     // ─── Growth curve threading ─────────────────────────────────────
 
     #[test]
     fn growth_curve_threads_through_pet_level() {
-        // base at level 0 = 12 (sonnet), at level 50 = 12*0.5=6.
+        // base at level 0 = 4 (sonnet, 240K weighted),
+        // base at level 50 = 4 × 0.5 = 2.
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("claude-sonnet-4", 2000, 2000, 0);
+        let ue = usage_event("claude-sonnet-4", 40_000, 40_000, 0);
         let ident = ModelIdent::parse(&ue.model);
 
         let c0 = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
         let c50 = UsageScorer::score(&ue, &ident, &r, 50).unwrap();
-        assert_eq!(c0.xp_delta, 12);
-        assert_eq!(c50.xp_delta, 6);
+        assert_eq!(c0.xp_delta, 4);
+        assert_eq!(c50.xp_delta, 2);
     }
 
     // ─── Validation / anti-cheat short-circuits ─────────────────────
@@ -371,12 +377,13 @@ mod tests {
     fn free_tier_model_still_grants_xp_at_mini_tier() {
         // claude-opus-4-7-free → Registry's free marker → Tier::Mini.
         // Free pricing doesn't mean zero XP; the user still used the
-        // model. 2000 output → 10000 weighted → base = 10*0.5=5.
+        // model. input=20K output=20K → weighted=120_000
+        // base = 120_000/60_000 × 0.7 × 1.0 × 1.0 = 1.4 → 1
         let r = rule(json!({ "multiplier": 1.0 }));
-        let ue = usage_event("claude-opus-4-7-free", 0, 2000, 0);
+        let ue = usage_event("claude-opus-4-7-free", 20_000, 20_000, 0);
         let ident = ModelIdent::parse(&ue.model);
         assert_eq!(ident.tier, Tier::Mini);
         let c = UsageScorer::score(&ue, &ident, &r, 0).unwrap();
-        assert_eq!(c.xp_delta, 5);
+        assert_eq!(c.xp_delta, 1);
     }
 }
