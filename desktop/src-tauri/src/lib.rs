@@ -743,7 +743,17 @@ async fn naming_window_show(
                // next time the pet's state is re-evaluated.
         |main, w, h| notify_window_position(main, w, h),
     )
-    .await
+    .await?;
+    // Nudge the naming window's React side to re-read `last_naming`
+    // and reset its local form state. The window itself is created
+    // once and reused via .hide()/.show() across hatching events —
+    // without this event the NamingView component (mounted once)
+    // keeps the FIRST pet's prompt forever, and worse, its
+    // `submitting` state stays stuck at `true` from the previous
+    // dismiss, disabling the input + buttons. See the matching
+    // listener in NamingView.tsx.
+    let _ = app.emit("naming://refresh", ());
+    Ok(())
 }
 
 #[tauri::command]

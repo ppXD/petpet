@@ -17,8 +17,9 @@
  * NotifyView.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import "./NamingView.css";
 
 interface NamingPrompt {
@@ -40,22 +41,34 @@ export function NamingView() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const lastSizeRef = useRef<{ w: number; h: number } | null>(null);
 
-  // Pull the current prompt on mount. Naming windows are one-shot —
-  // no need to subscribe to live updates (each hatching gets a fresh
-  // `naming_window_show` call which replaces the stored prompt).
-  useEffect(() => {
-    let cancelled = false;
+  // Pull the current prompt on mount AND on every `naming://refresh`
+  // emitted by `naming_window_show`. The Tauri naming window is
+  // created once and reused via .hide()/.show() across hatching
+  // events — so this React component is the SAME instance for every
+  // subsequent popup. Without the listener, the prompt + form state
+  // would freeze at whatever the first hatching set (stale pet name,
+  // and worse, `submitting=true` carried over from the previous
+  // dismiss would lock out the input + buttons).
+  const refreshFromBackend = useCallback(() => {
     invoke<NamingPrompt | null>("naming_current")
       .then((p) => {
-        if (!cancelled && p) setPrompt(p);
+        if (p) {
+          setPrompt(p);
+          setName("");           // clear stale input value
+          setSubmitting(false);  // unstick the previous dismiss
+          setError(null);
+        }
       })
-      .catch((e) => {
-        if (!cancelled) setError(String(e));
-      });
-    return () => {
-      cancelled = true;
-    };
+      .catch((e) => setError(String(e)));
   }, []);
+
+  useEffect(() => {
+    refreshFromBackend();
+    const unlistenP = listen("naming://refresh", () => refreshFromBackend());
+    return () => {
+      unlistenP.then((unlisten) => unlisten()).catch(() => {});
+    };
+  }, [refreshFromBackend]);
 
   // Focus the input once the prompt has rendered.
   useEffect(() => {
@@ -98,7 +111,12 @@ export function NamingView() {
         name: confirmed && name.trim() !== "" ? name.trim() : null,
         confirmed,
       });
-      // Don't reset `submitting` — the window is about to hide.
+      // Reset `submitting` immediately. The window is about to hide,
+      // but the React instance lives on (Tauri reuses the window) —
+      // leaving `submitting=true` would lock out the buttons on the
+      // NEXT hatching event before our naming://refresh listener
+      // has a chance to fire. Defense in depth.
+      setSubmitting(false);
     } catch (e) {
       setError(String(e));
       setSubmitting(false);
