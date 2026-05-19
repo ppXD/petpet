@@ -98,36 +98,63 @@ jobs:
           cache-dependency-path: desktop/pnpm-lock.yaml
 
       # ─── Sync version from tag into bundle manifests ─────────────
-      # `tauri-action` stamps Tauri's bundle filenames from the version
-      # field in tauri.conf.json — NOT from the git tag. If conf has
-      # 0.1.0 but we're releasing v0.2.0, every artifact gets named
-      # petpet_0.1.0_*, the tidy-asset-names job's globs (built off
-      # the tag) miss, and the published draft ships with
-      # `_universal` / `_en-US` suffixes still on it.
+      # `tauri-action` stamps Tauri's bundle FILENAMES from the version
+      # field in tauri.conf.json — NOT from the git tag. The COMPILED-IN
+      # version (visible via `petpet --version`, Windows MSI
+      # ProductVersion's metadata column, macOS About-box) comes from
+      # the Rust binary's Cargo.toml. If either is out of step with the
+      # tag, end users see "0.1.0" somewhere even on a v0.2.0 release.
       #
-      # Fix: rewrite the version in tauri.conf.json + package.json
-      # from the tag BEFORE pnpm/tauri build. The repo's checked-in
-      # version can stay at whatever the next planned release is
-      # (or `0.1.0-dev`); the release pipeline is the source of truth.
+      # Fix: rewrite the version in ALL four manifest files from the
+      # tag BEFORE pnpm/tauri build. The repo's checked-in versions
+      # can stay at whatever the next planned release is (or
+      # `0.1.0-dev`); the release pipeline is the source of truth.
       #
-      # jq is pre-installed on every GitHub Actions runner image
-      # (ubuntu/macos/windows). On Windows we run under Git-Bash
-      # (the `shell: bash` directive) so the same one-liner works.
+      #   desktop/src-tauri/tauri.conf.json   → bundle filenames
+      #   desktop/package.json                → frontend metadata
+      #   Cargo.toml                          → lib crate
+      #   desktop/src-tauri/Cargo.toml        → desktop bin crate
+      #                                         (--version, embedded metadata)
+      #
+      # jq is preinstalled on every GitHub Actions runner image
+      # (ubuntu/macos/windows). Python3 is too — used here for the
+      # TOML files since `sed -i` first-match syntax differs between
+      # BSD (macOS) and GNU (linux), but python regex is identical
+      # across all runners. On Windows the same script runs under
+      # Git-Bash via `shell: bash`.
       - name: Sync version from tag to bundle manifests
         shell: bash
-        working-directory: desktop
         run: |
           VERSION="${{ inputs.tag || github.ref_name }}"
           VERSION="${VERSION#v}"
-          echo "Syncing version $VERSION into tauri.conf.json + package.json"
+          echo "Syncing version $VERSION into manifests..."
 
+          # JSON files via jq
           TMP=$(mktemp)
-          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > "$TMP" && mv "$TMP" src-tauri/tauri.conf.json
+          jq --arg v "$VERSION" '.version = $v' desktop/src-tauri/tauri.conf.json > "$TMP" && mv "$TMP" desktop/src-tauri/tauri.conf.json
           TMP=$(mktemp)
-          jq --arg v "$VERSION" '.version = $v' package.json > "$TMP" && mv "$TMP" package.json
+          jq --arg v "$VERSION" '.version = $v' desktop/package.json > "$TMP" && mv "$TMP" desktop/package.json
+
+          # TOML files via python (cross-platform first-match regex).
+          # Replaces ONLY the first `^version = "X"` per file — the
+          # leading-anchor + count=1 keep dependency-line versions
+          # (e.g. `tokio = { version = "1.x" ... }`) untouched.
+          NEW_VERSION="$VERSION" python3 -c '
+          import os, re
+          v = os.environ["NEW_VERSION"]
+          for path in ["Cargo.toml", "desktop/src-tauri/Cargo.toml"]:
+              with open(path) as f:
+                  src = f.read()
+              out = re.sub(r"^version = \"[^\"]+\"", f"version = \"{v}\"",
+                           src, count=1, flags=re.MULTILINE)
+              with open(path, "w") as f:
+                  f.write(out)
+              print(f"  {path} synced")
+          '
 
           echo "After sync:"
-          grep -E '"version"' src-tauri/tauri.conf.json package.json
+          grep -E '"version"' desktop/src-tauri/tauri.conf.json desktop/package.json
+          grep '^version' Cargo.toml desktop/src-tauri/Cargo.toml
 
       - name: Install frontend dependencies
         working-directory: desktop
