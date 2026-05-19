@@ -59,6 +59,12 @@ chmod +x petpet_*_amd64.AppImage && ./petpet_*_amd64.AppImage
 
 petpet is a desktop companion that quietly listens to **Claude Code / Codex / OpenCode / Aider** — and more providers landing soon — then turns your real AI usage into the pet's growth. Code seriously, your pet thrives. Idle, it sleeps.
 
+<div align="center">
+  <img src="assets/screenshots/pet-hover.png" alt="Live pet — hover reveals name, level, XP progress bar, and the upcoming stage" width="380">
+  <br>
+  <sub><i>Hover the pet to peek at name · level · XP bar · upcoming stage</i></sub>
+</div>
+
 - 🔒 **Zero-risk, fully local.** No cloud, no telemetry, no account, no data ever leaves your machine. Open source, MIT-licensed, fully auditable.
 - 🪶 **Zero-setup.** No hook configuration. petpet auto-discovers existing session logs on launch.
 - 🤖 **Multi-agent.** One pet eats events from every supported AI coding tool; XP accumulates in a single pool.
@@ -142,13 +148,16 @@ Templates live at `~/.petpet/templates/<id>/` — pure JSON + PNGs. Hand-edit, g
 
 ###  📊 Dashboard
 
-Click your pet → opens a usage dashboard packed with:
+Click your pet → opens the **Trainer Card**: a per-pet (or "All") usage dashboard tracking your spend, XP gains, model breakdown, and every recent move.
+
+<div align="center">
+  <img src="assets/screenshots/dashboard.png" alt="Trainer Card dashboard — All view: 3 pets, $8273.25 lifetime spend, 25K XP, 14B tokens, per-provider breakdown, recent moves" width="540">
+</div>
 
 - 💰 **Feeding Bill** — today / this week / this month / lifetime USD + token totals
-- 📈 **30-day chart** — daily spend trend, see your AI habits at a glance
-- 🤖 **Per-model breakdown** — which models you've fed your pet, and how much
-- 📜 **Recent moves** — every XP gain logged with source (`usage` / `activity` / `manual`)
-- ⏮️ **All vs single-pet toggle** — `All` includes pre-install historical sessions (display-only, no retroactive XP)
+- 📈 **Per-provider breakdown** — Claude vs Codex vs OpenCode vs Aider, tokens + XP earned each
+- 📜 **Recent moves** — every XP gain logged with timestamp, pet, amount, and source (`usage` / `activity` / `manual`)
+- 🏆 **All vs single-pet toggle** — `All` aggregates every pet you've ever raised (including pre-install historical sessions, display-only)
 
 On launch, petpet performs **async historical import** of past session logs — your dashboard isn't empty on Day 1.
 
